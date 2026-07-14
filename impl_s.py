@@ -3,19 +3,20 @@ import json
 import sqlite3
 import pandas as pd
 from pandas import DataFrame
+from abc import ABC, abstractmethod
 
 # Class Handler (superclass)
 class Handler:
     def __init__(self):
-        self.DbPathOrUrl = str
+        self.dbPathOrUrl = ""
     
     def getDbPathOrUrl(self):
-        return self.DbPathOrUrl
+        return self.dbPathOrUrl
     
-    #GIÀ QUI NON STO PIù CAPENDO COME FUNZIONA
-    def setDbPathOrUrl(self, pathOrUrl: str) -> bool:
+    #Qui per ora copiato dal Pres ma non ho capito troppo come funziona
+    def setDbPathOrUrl(self, dbPathOrUrl: str) -> bool:
         try:
-            self.dbPathOrUrl = pathOrUrl
+            self.dbPathOrUrl = dbPathOrUrl
             return True
         except Exception as e:
             return False
@@ -28,26 +29,43 @@ class UploadHandler(Handler):
         super().__init__()
 
     @abstractmethod
-    def PushDataToDb(self, path: str) -> bool:
+    def pushDataToDb(self, path: str) -> bool:
         pass
     
 # Bibliographic Entity Upload Handler
-class BibliographicEntityUploadHandler(UploadHandler, Handler):
+class BibliographicEntityUploadHandler(UploadHandler):
     def __init__(self):
        super().__init__()
 
-    def PushDataToDb(self, path):
-        #return super().PushDataToDb(path)
 
-#Query Handler
+#Qui la parte che prende il JSON e lo trasforma in relational database!!!
+    def pushDataToDb(self, path):
+        return super().pushDataToDb(path)
+
+
 class QueryHandler(Handler):
     def __init__(self):
         super().__init__()
 
-    def getById:
+    def getById(self, id: str):
         pass
 
-#Bibliographichentityqueryhandler
+# Qui il query handler, usando SQL
 class BibliographicEntityQueryHandler(QueryHandler, Handler):
     def __init__(self):
         super().__init__()
+
+    def getAllBibliographicEntities():
+        pass
+
+    def  getBibliographicEntitiesWithTitle():
+        pass
+
+    def  getBibliographicEntitiesWithAuthor():
+        pass
+
+    def getBibliographicEntitiesWithinPublicationDate():
+        pass
+
+    def getBibliographicEntitiesWithVenue():
+        pass
