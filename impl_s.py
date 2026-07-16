@@ -5,6 +5,19 @@ import pandas as pd
 from pandas import DataFrame
 from abc import ABC, abstractmethod
 
+# Per calcoalre il timespan, che servirà in una query successiva
+def iso_duration_to_days(duration):
+    """Converting a timespan from a string in ISO8601 duration format where 
+    it's present in the total number of days using RegEx"""
+    if not duration:
+        return None
+    m = re.match(r"P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?", duration)
+    if m is None:
+        return None
+    years, months, days = (int(x) if x else 0 for x in m.groups())
+    return years * 365 + months * 30 + days
+
+
 # Class Handler (superclass)
 class Handler:
     def __init__(self):
@@ -43,12 +56,7 @@ class UploadHandler(Handler):
 #   "id": ["omid:br/...", "doi:...", "isbn:..."]
 # }
 
-class BibliographicEntityUploadHandler(UploadHandler):
-    def __init__(self):
-       super().__init__()
-
 #I dati dal JSON vengono inseriti nel relational database
-
 class BibliographicEntityUploadHandler(UploadHandler):
     def __init__(self):
        super().__init__()
@@ -106,29 +114,105 @@ class BibliographicEntityUploadHandler(UploadHandler):
             return False
 
 
-class QueryHandler(Handler):
+class QueryHandler(Handler, ABC):
     def __init__(self):
         super().__init__()
 
-    def getById(self, id: str):
+    @abstractmethod
+    def getById(self, id: str) -> pd.DataFrame:
         pass
 
 # Qui il query handler, usando SQL
-class BibliographicEntityQueryHandler(QueryHandler, Handler):
+class BibliographicEntityQueryHandler(QueryHandler):
     def __init__(self):
         super().__init__()
+    
+    def getById(self, id:str) -> pd.DataFrame:
+        with sqlite3.connect(self.getDbPathOrUrl()) as con:
+            query = """
+                SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author) as authors,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id) as ids
+                FROM BibliographicEntity_Metadata
+                LEFT JOIN BibliographicEntity_Authors 
+                    ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
+                LEFT JOIN BibliographicEntity_ID 
+                    ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_ID.internal_id
+                WHERE BibliographicEntity_Metadata.internal_id IN (
+                    SELECT internal_id FROM BibliographicEntity_ID WHERE id = ?
+                )
+                GROUP BY BibliographicEntity_Metadata.internal_id
+            """   
+        return pd.read_sql(query, con, params=(id,))
 
-    def getAllBibliographicEntities():
-        pass
+    def getAllBibliographicEntities(self):
+        with sqlite3.connect(self.getDbPathOrUrl()) as con:
+            query = """
+                SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author) as authors,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id) as ids
+                FROM BibliographicEntity_Metadata
+                LEFT JOIN BibliographicEntity_Authors 
+                    ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
+                LEFT JOIN BibliographicEntity_ID 
+                    ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_ID.internal_id
+                GROUP BY BibliographicEntity_Metadata.internal_id
+            """   
+        return pd.read_sql(query, con)
 
-    def  getBibliographicEntitiesWithTitle():
-        pass
+    def  getBibliographicEntitiesWithTitle(self, title):
+        with sqlite3.connect(self.getDbPathOrUrl()) as con:
+            query = """
+            SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author) as authors,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id) as ids
+                FROM BibliographicEntity_Metadata
+                LEFT JOIN BibliographicEntity_Authors 
+                    ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
+                LEFT JOIN BibliographicEntity_ID 
+                    ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_ID.internal_id
+                WHERE BibliographicEntity_Metadata.title LIKE ?
+                GROUP BY BibliographicEntity_Metadata.internal_id    
+            """   
+        return pd.read_sql(query, con, params=(title,)) 
+    
+    # !!! QUI NON HO CAPITO BENE COME VADA FORMATTATO IL TITOLO PER LA QUERY
 
-    def  getBibliographicEntitiesWithAuthor():
-        pass
+    def  getBibliographicEntitiesWithAuthor(self, author):
+        with sqlite3.connect(self.getDbPathOrUrl()) as con:
+            query = """
+            SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author) as authors,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id) as ids
+                FROM BibliographicEntity_Metadata
+                LEFT JOIN BibliographicEntity_Authors 
+                    ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
+                LEFT JOIN BibliographicEntity_ID 
+                    ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_ID.internal_id
+                WHERE BibliographicEntity_Metadata.author LIKE ?
+                GROUP BY BibliographicEntity_Metadata.internal_id    
+            """   
+        return pd.read_sql(query, con, params=(author,))
 
-    def getBibliographicEntitiesWithinPublicationDate():
-        pass
+    def getBibliographicEntitiesWithinPublicationDate(self, start_date, end_date):
+        with sqlite3.connect(self.getDbPathOrUrl()) as con:
+            query = """
+                
+            """   
+        return pd.read_sql(query, con, params=(start_date, end_date,))
 
-    def getBibliographicEntitiesWithVenue():
-        pass
+    def getBibliographicEntitiesWithVenue(self, venue):
+        with sqlite3.connect(self.getDbPathOrUrl()) as con:
+            query = """
+            SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author) as authors,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id) as ids
+                FROM BibliographicEntity_Metadata
+                LEFT JOIN BibliographicEntity_Authors 
+                    ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
+                LEFT JOIN BibliographicEntity_ID 
+                    ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_ID.internal_id
+                WHERE BibliographicEntity_Metadata.venue LIKE ?
+                GROUP BY BibliographicEntity_Metadata.internal_id    
+            """   
+        return pd.read_sql(query, con, params=(venue,))
