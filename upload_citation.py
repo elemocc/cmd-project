@@ -1,6 +1,7 @@
 from rdflib import Graph, URIRef, Literal, RDF, Namespace, XSD
-from pandas import read_csv, Series
 from SPARQLWrapper import SPARQLWrapper, POST, DIGEST
+from urllib.error import URLError
+from SPARQLWrapper.SPARQLExceptions import SPARQLWrapperException
 import re
 import pandas as pd
 from csv import DictReader
@@ -26,7 +27,7 @@ class UploadHandler(Handler):
         super().__init__()
 
     # Methods
-    def pushDataToDb(self, path: str): 
+    def pushDataToDb(self, path: str) -> bool: 
         pass
 
 
@@ -50,7 +51,8 @@ class CitationUploadHandler(UploadHandler):
     their data in a graph database"""  
     def __init__(self):
         super().__init__()
-        
+    
+    # The function for reading the CSV file and creating the graph
     def pushDataToDb(self, path: str) -> bool:
         """The string defining the base URL used to define the URLs
         of all the resources created from the data"""
@@ -71,7 +73,8 @@ class CitationUploadHandler(UploadHandler):
         citing_prop = URIRef(self.base_url + "vocab/hasCitingEntity")
         cited_prop = URIRef(self.base_url + "vocab/hasCitedEntity")
 
-        with open(path, "r", encoding="utf-8") as f: # Opening the csv file and close it automatically at the end of the indented block
+        # Opening the csv file and close it automatically at the end of the indented block
+        with open(path, "r", encoding="utf-8") as f: 
             reader_csv = DictReader(f) # Reading the csv with the first row as the header
             for row in reader_csv: # A for loop through the csv in order to construct the nodes of the graph
                 subj = URIRef(self.base_url + "res/citation-" + row["oci"]) # The creation of the URI for citation 
@@ -97,10 +100,49 @@ class CitationUploadHandler(UploadHandler):
                 if row["journal_sc"].strip().lower() == "yes":
                     my_graph.add((subj, RDF.type, Journal_SC))
 
-
+                # Adding to the graph the relations between entities
                 my_graph.add((subj, citing_prop, citing_entity))
                 my_graph.add((subj, cited_prop, cited_entity))
-                
+
+                # Adding the date: creating a Literal specifyng the type as XSD.date
+                if row["creation"]:
+                    my_graph.add((subj, creation, Literal(row["creation"], datatype=XSD.date)))
+
+                """ Adding the timespan: saving the original value as a string
+                then calling the function iso_duration_days for retrieving the
+                amount of days, then adding a second triple specified as XSD.integer """
+                if row["timespan"]:
+                    my_graph.add((subj, duration_prop, Literal(row["timespan"])))
+                    days = iso_duration_to_days(row["timespan"])
+                    if days is not None:
+                        my_graph.add((subj, duration_days_prop, Literal(days, datatype=XSD.integer)))
+
+        """ At the end of the for loop the file will be closed and the graph will 
+         contain all triples from all the citations """
+        return self._upload_graph(my_graph)
+    
+    # The function for pushing the graph to Blazegraph that takes as inputs: self, the graph and the batch size
+    def _upload_graph(self, g, batch_size=200):
+        """ Uploading triples on Blazegraph by batches, to avoid query too big """
+        try: 
+            triples = list(g) # Transforming the graph into a list of tuples (subject, predicate, object)
+            for i in range(0, len(triples), batch_size):
+                batch = triples[i:i + batch_size]
+                insert_data = " .\n".join(
+                    f"{s.n3()} {p.n3()} {o.n3()}" for s, p, o in batch
+                )
+                query = f"INSERT DATA {{ {insert_data} . }}"
+
+                sparql = SPARQLWrapper(self.dbPathOrUrl)
+                sparql.setMethod(POST)
+                sparql.setQuery(query)
+                sparql.query()
+
+            return True
+
+        except (URLError, SPARQLWrapperException) as e:
+            print(f"Communication error with Blazegraph: {e}")
+            return False                
 
 
 
