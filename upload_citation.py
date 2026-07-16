@@ -72,11 +72,35 @@ class CitationUploadHandler(UploadHandler):
         cited_prop = URIRef(self.base_url + "vocab/hasCitedEntity")
 
         with open(path, "r", encoding="utf-8") as f: # Opening the csv file and close it automatically at the end of the indented block
-            reader_csv = DictReader(f)
-            for row in reader_csv:
-                subj = URIRef(self.base_url)
+            reader_csv = DictReader(f) # Reading the csv with the first row as the header
+            for row in reader_csv: # A for loop through the csv in order to construct the nodes of the graph
+                subj = URIRef(self.base_url + "res/citation-" + row["oci"]) # The creation of the URI for citation 
+                """ The creation of the URI for citing entity and for the cited entity, also
+                replacing ":" with "-" for a matter of URI syntax
+                """
+                citing_entity = URIRef(self.base_url + "res/" + row["citing"].replace(":", "-")) 
+                cited_entity = URIRef(self.base_url + "/res" + row["cited"].replace(":", "-"))
+
+                """ Adding to the graph the triple (subject, predicate, object) 
+                using the syntax for tuples, taking as subject the specific URI, 
+                the RDF.type as predicate to specify the data type, 
+                and the specific class Citation as the object """
+                my_graph.add((subj, RDF.type, Citation)) 
+
+                """ If a subject has more than one type: the subject remain the same
+                but the object can be more than one. In these two following cases, the same
+                subject and the same precidate have three different objects, three different 
+                triples that can coexist within the same subject in RDF. 
+                This will be usefull managing the queries """
+                if row["author_sc"].strip().lower() == "yes":
+                    my_graph.add((subj, RDF.type, Author_SC))
+                if row["journal_sc"].strip().lower() == "yes":
+                    my_graph.add((subj, RDF.type, Journal_SC))
 
 
+                my_graph.add((subj, citing_prop, citing_entity))
+                my_graph.add((subj, cited_prop, cited_entity))
+                
 
 
 
