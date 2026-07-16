@@ -62,8 +62,14 @@ class BibliographicEntityUploadHandler(UploadHandler):
                 
             df = pd.json_normalize(raw_data) #dataframe creato con normalizzazione delle strutture nested
             
-            # Creo codice id interno univoco
-            df["internal_id"] = ["internal_" + str(i) for i in range(len(df))]
+            # come internal identifier è stato scelto omid in quanto presente in tutte le istanze del dataset di prova
+            # e per coerenza con quanto fatto nel graph database
+            def extract_omid(id_list):
+                for identifier in id_list:
+                    if identifier.startswith("omid:"):
+                        return identifier.replace(":", "-")
+                return None 
+            df["internal_id"] = df["id"].apply(extract_omid)
             
             # Normalizzo tutti i valori vuoti convertendoli in stringhe vuote per i keys 
             # che hanno una sola stringa (titolo, publication date, venue)
