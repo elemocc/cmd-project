@@ -92,7 +92,7 @@ class BibliographicEntityUploadHandler(UploadHandler):
             for col in ["title", "pub_date", "venue"]:
                 df[col] = df[col].fillna("").astype(str).str.strip()
 
-            df["pub_date"] = df["pub_date"].apply(self.normalize_pub_date)
+            df["pub_date"] = df["pub_date"].apply(normalize_pub_date)
                 
             # Li salvo in una tabella che contiene solo questi metadati
             bibliographic_entity = df[["internal_id", "title", "pub_date", "venue"]]
@@ -184,7 +184,7 @@ class BibliographicEntityQueryHandler(QueryHandler):
                 WHERE BibliographicEntity_Metadata.title LIKE ?
                 GROUP BY BibliographicEntity_Metadata.internal_id    
             """   
-        return pd.read_sql(query, con, params=(title,)) 
+        return pd.read_sql(query, con, params=(f"%{title}%",)) 
     
     # !!! QUI NON HO CAPITO BENE COME VADA FORMATTATO IL TITOLO PER LA QUERY
 
@@ -199,10 +199,10 @@ class BibliographicEntityQueryHandler(QueryHandler):
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
                 LEFT JOIN BibliographicEntity_ID 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_ID.internal_id
-                WHERE BibliographicEntity_Metadata.author LIKE ?
+                WHERE BibliographicEntity_Authors.author LIKE ?
                 GROUP BY BibliographicEntity_Metadata.internal_id    
             """   
-        return pd.read_sql(query, con, params=(author,))
+        return pd.read_sql(query, con, params=(f"%{author}%",))
 
     def getBibliographicEntitiesWithinPublicationDate(self, start_date: str = None, end_date: str = None) -> pd.DataFrame:
     
@@ -274,4 +274,20 @@ class BibliographicEntityQueryHandler(QueryHandler):
                 WHERE BibliographicEntity_Metadata.venue LIKE ?
                 GROUP BY BibliographicEntity_Metadata.internal_id    
             """   
-        return pd.read_sql(query, con, params=(venue,))
+        return pd.read_sql(query, con, params=(f"%{venue}%",))
+    
+
+
+# 1. Da controllare: query autori se funziona o no
+
+# 2. fare una cosa per cui se non esiste quell'ID non va tutto a puttane (extract_omid non gestisce id mancante)
+
+# 3. return fuori dal blocco with in quasi tutti i metodi
+# pythondef getById(self, id:str) -> pd.DataFrame:
+#     with sqlite3.connect(self.getDbPathOrUrl()) as con:
+#         query = """..."""   
+#     return pd.read_sql(query, con, params=(id,))  # <- fuori dal "with", indentazione errata
+# Nota l'indentazione: return è allineato con with, non con query — quindi è fuori dal blocco. Con sqlite3.Connection questo non causa un errore immediato (a differenza di molti altri context manager, with conn: su SQLite gestisce solo commit/rollback della transazione, non chiude la connessione all'uscita del blocco), quindi il codice "funziona" per puro caso di come è implementato sqlite3 — ma è comunque scorretto concettualmente: la connessione resta aperta più a lungo del necessario, e se in futuro cambiassi tipo di database (es. altro driver DB-API compatibile) questo codice si romperebbe silenziosamente. Va corretto ovunque spostando return dentro il blocco.
+
+# 4. Separatore GROUP_CONCAT mancante nella maggior parte dei metodi
+# Solo getBibliographicEntitiesWithinPublicationDate usa GROUP_CONCAT(..., ';'). Gli altri quattro metodi (getById, getAllBibliographicEntities, getBibliographicEntitiesWithTitle, getBibliographicEntitiesWithVenue, e la versione corretta di getBibliographicEntitiesWithAuthor) usano il separatore di default (virgola) — ma avevamo discusso che i nomi autore contengono già virgole (es. "Sinikallio, Laura"), quindi va uniformato ovunque con ';'.
