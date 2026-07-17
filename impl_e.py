@@ -326,3 +326,39 @@ class BasicQueryEngine:
             all_cit_date.append(citation)
         
         return all_cit_date 
+
+class FullQueryEngine(BasicQueryEngine): #let's use a combination of the methods I've implemented 
+    
+    def __init__(self):
+        super().__init__ #this "calls" the init of the superclass
+
+    def getAuthorSelfCitationsByName(self, author_name):
+        all_author_sc = self.getAllAuthorSelfCitations()
+        result = []
+        for citation in all_author_sc:
+            citing_ent = citation.getCitingEntity()
+            cited_ent = citation.hasCitedEntity()
+
+            citing_authors = citing_ent.getAuthors()
+            cited_authors = cited_ent.getAuthors()
+
+            if author_name in citing_authors and author_name in cited_authors:
+                result.append(citation)
+
+        return result
+
+    def getJournalSelfCitationsByName(self, journal_name):
+        all_journal_sc = self.getAllJournalSelfCitations()
+        result = []
+        for citation in all_journal_sc:
+            citing_ent = citation.getCitingEntity()
+            cited_ent = citation.getCitedEntity()
+
+            citing_journal = citing_ent.getVenue()
+            cited_journal =  cited_ent.getVenue()
+
+            if journal_name == citing_journal and journal_name == cited_journal
+            
+                result.append(citation)
+
+        return result
