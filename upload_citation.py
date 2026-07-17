@@ -126,23 +126,32 @@ class CitationUploadHandler(UploadHandler):
         """ Uploading triples on Blazegraph by batches, to avoid query too big """
         try: 
             triples = list(g) # Transforming the graph into a list of tuples (subject, predicate, object)
-            for i in range(0, len(triples), batch_size):
-                batch = triples[i:i + batch_size]
+            for i in range(0, len(triples), batch_size): # Number of iteration depends on the number of triples and the batch size
+                batch = triples[i:i + batch_size] # Slicing over the list of triples depending on the batch size
+                """ Setting the string for SPARQL query assigning for every triple the three variables 
+                # s (subject), p (predicate), o (object) to a string in SPARQL syntax using
+                # rdflib n.3() method to convert an URI or a Literal. Then joining all the strings together """
                 insert_data = " .\n".join(
                     f"{s.n3()} {p.n3()} {o.n3()}" for s, p, o in batch
-                )
-                query = f"INSERT DATA {{ {insert_data} . }}"
+                ) 
+                query = f"INSERT DATA {{ {insert_data} . }}" # To insert the value of the variable insert_data (the string with all the triple) into the query text
+                # Also adding the last "." terminating the last triple for SPARQL syntax
 
-                sparql = SPARQLWrapper(self.dbPathOrUrl)
-                sparql.setMethod(POST)
-                sparql.setQuery(query)
-                sparql.query()
+                """ This following block will be repeated for every batch """
+                sparql = SPARQLWrapper(self.dbPathOrUrl) # Creating an object to communicate with SPARQL endpoint
+                sparql.setMethod(POST) # The method POST is necessary with INSERT DATA
+                sparql.setQuery(query) # Setting the query text from the query above
+                sparql.query() # Executing the query via Blazegraph sending triples
 
-            return True
+            return True # True stands for successfull upload
 
-        except (URLError, SPARQLWrapperException) as e:
+        # In case of fail
+        except (URLError, SPARQLWrapperException) as e: 
             print(f"Communication error with Blazegraph: {e}")
-            return False                
+            return False    
+
+
+            
 
 
 
