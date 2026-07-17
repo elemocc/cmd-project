@@ -134,8 +134,10 @@ class CitationUploadHandler(UploadHandler):
                 insert_data = " .\n".join(
                     f"{s.n3()} {p.n3()} {o.n3()}" for s, p, o in batch
                 ) 
-                query = f"INSERT DATA {{ {insert_data} . }}" # To insert the value of the variable insert_data (the string with all the triple) into the query text
-                # Also adding the last "." terminating the last triple for SPARQL syntax
+                """ To insert the value of the variable insert_data 
+                (the string with all the triple) into the query text
+                Also adding the last "." terminating the last triple for SPARQL syntax """
+                query = f"INSERT DATA {{ {insert_data} . }}" 
 
                 """ This following block will be repeated for every batch """
                 sparql = SPARQLWrapper(self.dbPathOrUrl) # Creating an object to communicate with SPARQL endpoint
@@ -150,8 +152,12 @@ class CitationUploadHandler(UploadHandler):
             print(f"Communication error with Blazegraph: {e}")
             return False    
 
+# –––––––––––––––––––––– CitationQueryHandler  ––––––––––––––––––––––
 
-            
+class CitationQueryHandler(QueryHandler):
+
+
+
 
 
 
