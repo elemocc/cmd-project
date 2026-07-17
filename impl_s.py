@@ -78,13 +78,23 @@ class BibliographicEntityUploadHandler(UploadHandler):
             df = pd.json_normalize(raw_data) #dataframe creato con normalizzazione delle strutture nested
             
             # come internal identifier è stato scelto omid in quanto presente in tutte le istanze del dataset di prova
-            # e per coerenza con quanto fatto nel graph database
+            # e per coerenza con quanto fatto nel graph database. Se presenti, le istanze senza omid vengono scartate e questo
+            # viene segnalato confrontando il numero di istanze prima e dopo e printando un messaggio nel terminale
+
             def extract_omid(id_list):
+                if not isinstance(id_list, list):
+                    return None
                 for identifier in id_list:
                     if identifier.startswith("omid:"):
                         return identifier.replace(":", "-")
-                return None 
+                return None
+
+            before = len(df)
             df["internal_id"] = df["id"].apply(extract_omid)
+            df = df.dropna(subset=["internal_id"])
+            after = len(df)
+            if before != after:
+                print(f"Attenzione: {before - after} record scartati per omid mancante")
             
             # Normalizzo tutti i valori vuoti convertendoli in stringhe vuote per i keys 
             # che hanno una sola stringa (titolo, publication date, venue)
