@@ -288,10 +288,3 @@ class BibliographicEntityQueryHandler(QueryHandler):
             return pd.read_sql(query, con, params=(f"%{venue}%",))
     
 
-
-# 1. Nelle date normalizzate, decidere se segnalare in qualche modo che è stato fatto un padding o tenere una copia dell'originale
-# 2. fare una cosa per cui se non esiste quell'ID non va tutto a puttane (extract_omid non gestisce id mancante)
-#.   -> eliminarli dal database?
-#.   -> tenerli con quel valore vuoto (però poi non sono interrogabili e non escono nelle queries)?
-
-
