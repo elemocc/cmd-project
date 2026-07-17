@@ -14,7 +14,6 @@ class Handler:
     def getDbPathOrUrl(self):
         return self.dbPathOrUrl
     
-    #Qui per ora copiato dal Pres ma non ho capito troppo come funziona
     def setDbPathOrUrl(self, dbPathOrUrl: str) -> bool:
         try:
             self.dbPathOrUrl = dbPathOrUrl
@@ -141,8 +140,8 @@ class BibliographicEntityQueryHandler(QueryHandler):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
             query = """
                 SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author) as authors,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id) as ids
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author, ';') as authors,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id, ';') as ids
                 FROM BibliographicEntity_Metadata
                 LEFT JOIN BibliographicEntity_Authors 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
@@ -153,14 +152,14 @@ class BibliographicEntityQueryHandler(QueryHandler):
                 )
                 GROUP BY BibliographicEntity_Metadata.internal_id
             """   
-        return pd.read_sql(query, con, params=(id,))
+            return pd.read_sql(query, con, params=(id,))
 
     def getAllBibliographicEntities(self):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
             query = """
                 SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author) as authors,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id) as ids
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author, ';') as authors,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id, ';') as ids
                 FROM BibliographicEntity_Metadata
                 LEFT JOIN BibliographicEntity_Authors 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
@@ -168,14 +167,14 @@ class BibliographicEntityQueryHandler(QueryHandler):
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_ID.internal_id
                 GROUP BY BibliographicEntity_Metadata.internal_id
             """   
-        return pd.read_sql(query, con)
+            return pd.read_sql(query, con)
 
     def  getBibliographicEntitiesWithTitle(self, title):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
             query = """
             SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author) as authors,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id) as ids
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author, ';') as authors,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id, ';') as ids
                 FROM BibliographicEntity_Metadata
                 LEFT JOIN BibliographicEntity_Authors 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
@@ -184,25 +183,27 @@ class BibliographicEntityQueryHandler(QueryHandler):
                 WHERE BibliographicEntity_Metadata.title LIKE ?
                 GROUP BY BibliographicEntity_Metadata.internal_id    
             """   
-        return pd.read_sql(query, con, params=(f"%{title}%",)) 
-    
-    # !!! QUI NON HO CAPITO BENE COME VADA FORMATTATO IL TITOLO PER LA QUERY
+            return pd.read_sql(query, con, params=(f"%{title}%",)) 
 
     def  getBibliographicEntitiesWithAuthor(self, author):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
             query = """
             SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author) as authors,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id) as ids
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author, ';') as authors,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id, ';') as ids
                 FROM BibliographicEntity_Metadata
                 LEFT JOIN BibliographicEntity_Authors 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
                 LEFT JOIN BibliographicEntity_ID 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_ID.internal_id
-                WHERE BibliographicEntity_Authors.author LIKE ?
+                WHERE BibliographicEntity_Metadata.internal_id IN (
+                SELECT internal_id FROM BibliographicEntity_Authors WHERE author LIKE ?
+                )
                 GROUP BY BibliographicEntity_Metadata.internal_id    
             """   
-        return pd.read_sql(query, con, params=(f"%{author}%",))
+            return pd.read_sql(query, con, params=(f"%{author}%",))
+        
+        #qui ho fatto una "sottoquery" perché altrimenti si perdevano tutti i co-autori 
 
     def getBibliographicEntitiesWithinPublicationDate(self, start_date: str = None, end_date: str = None) -> pd.DataFrame:
     
@@ -264,8 +265,8 @@ class BibliographicEntityQueryHandler(QueryHandler):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
             query = """
             SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author) as authors,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id) as ids
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author, ';') as authors,
+                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id, ';') as ids
                 FROM BibliographicEntity_Metadata
                 LEFT JOIN BibliographicEntity_Authors 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
@@ -274,20 +275,13 @@ class BibliographicEntityQueryHandler(QueryHandler):
                 WHERE BibliographicEntity_Metadata.venue LIKE ?
                 GROUP BY BibliographicEntity_Metadata.internal_id    
             """   
-        return pd.read_sql(query, con, params=(f"%{venue}%",))
+            return pd.read_sql(query, con, params=(f"%{venue}%",))
     
 
 
-# 1. Da controllare: query autori se funziona o no
-
+# 1. Nelle date normalizzate, decidere se segnalare in qualche modo che è stato fatto un padding o tenere una copia dell'originale
 # 2. fare una cosa per cui se non esiste quell'ID non va tutto a puttane (extract_omid non gestisce id mancante)
+#.   -> eliminarli dal database?
+#.   -> tenerli con quel valore vuoto (però poi non sono interrogabili e non escono nelle queries)?
 
-# 3. return fuori dal blocco with in quasi tutti i metodi
-# pythondef getById(self, id:str) -> pd.DataFrame:
-#     with sqlite3.connect(self.getDbPathOrUrl()) as con:
-#         query = """..."""   
-#     return pd.read_sql(query, con, params=(id,))  # <- fuori dal "with", indentazione errata
-# Nota l'indentazione: return è allineato con with, non con query — quindi è fuori dal blocco. Con sqlite3.Connection questo non causa un errore immediato (a differenza di molti altri context manager, with conn: su SQLite gestisce solo commit/rollback della transazione, non chiude la connessione all'uscita del blocco), quindi il codice "funziona" per puro caso di come è implementato sqlite3 — ma è comunque scorretto concettualmente: la connessione resta aperta più a lungo del necessario, e se in futuro cambiassi tipo di database (es. altro driver DB-API compatibile) questo codice si romperebbe silenziosamente. Va corretto ovunque spostando return dentro il blocco.
 
-# 4. Separatore GROUP_CONCAT mancante nella maggior parte dei metodi
-# Solo getBibliographicEntitiesWithinPublicationDate usa GROUP_CONCAT(..., ';'). Gli altri quattro metodi (getById, getAllBibliographicEntities, getBibliographicEntitiesWithTitle, getBibliographicEntitiesWithVenue, e la versione corretta di getBibliographicEntitiesWithAuthor) usano il separatore di default (virgola) — ma avevamo discusso che i nomi autore contengono già virgole (es. "Sinikallio, Laura"), quindi va uniformato ovunque con ';'.
