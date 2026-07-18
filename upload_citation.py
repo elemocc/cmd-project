@@ -1,5 +1,5 @@
 from rdflib import Graph, URIRef, Literal, RDF, Namespace, XSD
-from SPARQLWrapper import SPARQLWrapper, POST, DIGEST
+from SPARQLWrapper import SPARQLWrapper, POST, DIGEST, JSON
 from urllib.error import URLError
 from SPARQLWrapper.SPARQLExceptions import SPARQLWrapperException
 import re
@@ -155,6 +155,79 @@ class CitationUploadHandler(UploadHandler):
 # –––––––––––––––––––––– CitationQueryHandler  ––––––––––––––––––––––
 
 class CitationQueryHandler(QueryHandler):
+    def __init__(self):
+        super().__init__()
+
+    def _run_query(self, query):
+        sparql = SPARQLWrapper(self.dbPathOrUrl) # Creating a SPARQLWrapper object pointed to the SPARQL endpoint (Blazegraph URL)
+        sparql.setQuery(query) # Setting the text for SPARQL query
+        sparql.setReturnFormat(JSON) # Returning the answer in a JSON format
+        results = sparql.query().convert()
+
+
+        rows = []
+        for binding in results["results"]["bindings"]:
+            rows.append({k: v["value"] for k, v in binding.items()})
+        return pd.DataFrame(rows)
+    
+    def getAllCitations(self):
+        query = """
+        PREFIX vocab: <https://example.org/vocab/>
+        SELECT ?citation ?citing ?cited ?creation ?duration WHERE {
+            ?citation a vocab:Citation ;
+                      vocab:hasCitingEntity ?citing ;
+                      vocab:hasCitedEntity ?cited .
+            OPTIONAL { ?citation vocab:hasCreationDate ?creation }
+            OPTIONAL { ?citation vocab:hasDuration ?duration }
+        }
+        """
+        return self._run_query(query)
+    
+    def getAllAuthorSelfCitations(self):
+        query = """
+        PREFIX vocab: <https://example.org/vocab/>
+        SELECT ?citation ?citing ?cited WHERE {
+            ?citation a vocab:AuthorSelfCitation ;
+                      vocab:hasCitingEntity ?citing ; 
+                      vocab:hasCitedEntity ? cited .
+        }
+        """
+        return self._run_query(query)
+    
+    def getAllJournalSelfCitations(self):
+        query = """
+        PREFIX vocab: <https://example.org/vocab/>
+        SELECT ?citation ?citing ?cited WHERE {
+            ?citation a vocab:JournalSelfCitation ;
+                      vocab:hasCitingEntity ?citing ;
+                      vocab:hasCitedEntity ?cited .
+        }
+        """
+        return self._run_query(query)
+    
+    def getCitationWithinDate(self, min_date=None, max_date=None):
+        filters = []
+        if min_date:
+            filters.append(f'FILTER (?creation >= "{min_date}"^^xsd:date)')
+        if max_date:
+            filters.append(f'FILTER (?creation <= "{max_date}"^^xsd:date)')
+
+        query = f"""
+        PREFIX vocab: <https://example.org/vocab/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+        SELECT ?citation ?citing ?cited ?creation WHERE {{
+            ?citation a vocab:Citation ;
+                      voca:hasCitingEntity ?citing ;
+                      vocab:hasCitedEntity ?cited ;
+                      vocab:hasCreationDate ?creation .
+            {' '.join(filters)}
+        }}
+        """
+        return self._run_query(query)
+
+
+
+
 
 
 
