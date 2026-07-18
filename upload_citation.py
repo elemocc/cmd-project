@@ -161,22 +161,37 @@ class CitationQueryHandler(QueryHandler):
     def _run_query(self, query):
         sparql = SPARQLWrapper(self.dbPathOrUrl) # Creating a SPARQLWrapper object pointed to the SPARQL endpoint (Blazegraph URL)
         sparql.setQuery(query) # Setting the text for SPARQL query
-        sparql.setReturnFormat(JSON) # Returning the answer in a JSON format
+        sparql.setReturnFormat(JSON) # Asking Blazegraph endpoint to reply in JSON format
 
-        #.query() will execute the query via Blazegraph, then .convert() will transform it ina Python dictionary
+        #.query() will execute the query via Blazegraph, 
+        # then .convert() will transform it ina Python dictionary because we set JSON format above
         results = sparql.query().convert()
         
-        assert isinstance(results, dict) # Checking if "results" is a dictionary
+
+        assert isinstance(results, dict) 
+        """ This line does two things at once:
+        At RUNTIME: it actually checks that "results" really is a dict.
+        If it's not, the program stops here with a clear AssertionError,
+        instead of failing later with a more confusing error.
+        For Pylance: "type narrowing", from this line onward, Pylance 
+        "trusts" that results is a dict.
+        """
 
         rows = []
-        for binding in results["results"]["bindings"]:
-            rows.append({k: v["value"] for k, v in binding.items()})
+        for binding in results["results"]["bindings"]: 
+            # Iterating over the list of rows found by the query: 
+            # "binding" is one single row of the SPARQL result
+            #e.g. {"citation": {"type": "uri", "value": "..."}, "citing": {...}}
+            rows.append({k: v["value"] for k, v in binding.items()}) 
+            # we keep only the actual value of each variable, discarding "type"/"datatype"
         
         """Converting the list of dictionaries in a pandas frame: 
         every dictionary is a row and every key is the name of a column"""
         return pd.DataFrame(rows) 
    
     def getAllCitations(self):
+        """Return all citations including the ones without a known creation
+        date or duration (which is OPTIONAL)"""
         query = """
         PREFIX vocab: <https://example.org/vocab/>
         SELECT ?citation ?citing ?cited ?creation ?duration WHERE {
@@ -187,9 +202,19 @@ class CitationQueryHandler(QueryHandler):
             OPTIONAL { ?citation vocab:hasDuration ?duration }
         }
         """
-        return self._run_query(query)
-    
+        df = self._run_query(query)
+
+        # Conveting the values from SPARQL from strings to real datetime for the
+        # date column when present
+        if not df.empty and "creation" in df.columns:
+            df["creation"] =pd.to_datetime(df["creation"], errors="coerce")
+            # errors="coerce": invalid/missing dates become NaT instead of raising error
+
+        return df
+
     def getAllAuthorSelfCitations(self):
+        """Return only the citations flagged as author self-citations 
+        (author_sc == "yes" in the original CSV)"""
         query = """
         PREFIX vocab: <https://example.org/vocab/>
         SELECT ?citation ?citing ?cited WHERE {
@@ -201,6 +226,8 @@ class CitationQueryHandler(QueryHandler):
         return self._run_query(query)
     
     def getAllJournalSelfCitations(self):
+        """Return only the citations flagged as journal self-citations
+        (journal_sc == "yes" in the original CSV)"""
         query = """
         PREFIX vocab: <https://example.org/vocab/>
         SELECT ?citation ?citing ?cited WHERE {
@@ -212,6 +239,10 @@ class CitationQueryHandler(QueryHandler):
         return self._run_query(query)
     
     def getCitationWithinDate(self, min_date=None, max_date=None):
+        """Return citations whose creation date falls within [min_date, max_date].
+        Both bounds are optional: if one is missing, that side is unbounded"""
+        
+        # Build the FILTER clauses dynamically, only for the bounds provided
         filters = []
         if min_date:
             filters.append(f'FILTER (?creation >= "{min_date}"^^xsd:date)')
@@ -229,10 +260,21 @@ class CitationQueryHandler(QueryHandler):
             {' '.join(filters)}
         }}
         """
-        return self._run_query(query)
+        df = self._run_query(query)
+
+        if not df.empty and "creation" in df.colums:
+            df["creation"] = pd.to_datetime(df["creation"], errors="coerce")
+
+        return df
     
     def getCitationWithinTimespan(self, min_span=None, max_span=None):
-        # Comparing the duration on days, previously calculated in the CitationUploadHandler
+        """ Return citations whose duration (timespan) falls within
+        [min_span, max_span] both given as ISO8601 duration strings. 
+        The comparison happens on the precomputed "days" value not on
+        the ISO string itself"""
+        
+        # Convert the input bounds (ISO duration strings) into days too 
+        # to compare numbers against numbers
         min_days = iso_duration_to_days(min_span) if min_span else None
         max_days = iso_duration_to_days(max_span) if max_span else None
 
@@ -253,7 +295,13 @@ class CitationQueryHandler(QueryHandler):
             {' '.join(filters)}
         }}
         """
-        return self._run_query(query)
+        df = self._run_query(query)
+
+        # "days" comes back as text so convert it to a number 
+        if not df.empty and "days" in df.columns:
+            df["days"] = pd.to_numeric(df["days"])
+
+        return df
 
 
 
