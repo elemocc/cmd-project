@@ -5,33 +5,10 @@ from SPARQLWrapper.SPARQLExceptions import SPARQLWrapperException
 import re
 import pandas as pd
 from csv import DictReader
+from abc import ABC, abstractmethod    
 
 
-class Handler():
-    def __init__(self):
-        self.dbPathOrUrl = ""
-
-    # Methods
-    def getDbPAthOrUrl(self):
-        return self.dbPathOrUrl 
-     # it returns the path or URL of the database
-    
-    def setDbPathOrUrl(self, pathOrUrl: str):
-        self.dbPathOrUrl = pathOrUrl
-        return True
-     # it enables to set a new path or URL for 
-     # the database to handle
-
-class UploadHandler(Handler):
-    def __init__(self):
-        super().__init__()
-
-    # Methods
-    def pushDataToDb(self, path: str) -> bool: 
-        pass
-
-
-# –––––––––––––––––––––– CitationUploadHandler  ––––––––––––––––––––––
+# Alice Machieraldo ––––––––––– CitationUploadHandler –––––––––––
 
 def iso_duration_to_days(duration):
     """Converting a timespan from a string in ISO8601 duration format where 
@@ -82,7 +59,7 @@ class CitationUploadHandler(UploadHandler):
                 replacing ":" with "-" for a matter of URI syntax
                 """
                 citing_entity = URIRef(self.base_url + "res/" + row["citing"].replace(":", "-")) 
-                cited_entity = URIRef(self.base_url + "/res" + row["cited"].replace(":", "-"))
+                cited_entity = URIRef(self.base_url + "res/" + row["cited"].replace(":", "-"))
 
                 """ Adding to the graph the triple (subject, predicate, object) 
                 using the syntax for tuples, taking as subject the specific URI, 
@@ -152,7 +129,8 @@ class CitationUploadHandler(UploadHandler):
             print(f"Communication error with Blazegraph: {e}")
             return False    
 
-# –––––––––––––––––––––– CitationQueryHandler  ––––––––––––––––––––––
+
+# Alice Machieraldo ––––––––––– CitationQueryHandler –––––––––––
 
 class CitationQueryHandler(QueryHandler):
     def __init__(self):
@@ -205,7 +183,8 @@ class CitationQueryHandler(QueryHandler):
         df = self._run_query(query)
 
         # Conveting the values from SPARQL from strings to real datetime for the
-        # date column when present
+        # date column when present (checking if there is a column for "creation" as it
+        # is optional)
         if not df.empty and "creation" in df.columns:
             df["creation"] =pd.to_datetime(df["creation"], errors="coerce")
             # errors="coerce": invalid/missing dates become NaT instead of raising error
@@ -220,7 +199,7 @@ class CitationQueryHandler(QueryHandler):
         SELECT ?citation ?citing ?cited WHERE {
             ?citation a vocab:AuthorSelfCitation ;
                       vocab:hasCitingEntity ?citing ; 
-                      vocab:hasCitedEntity ? cited .
+                      vocab:hasCitedEntity ?cited .
         }
         """
         return self._run_query(query)
@@ -238,7 +217,7 @@ class CitationQueryHandler(QueryHandler):
         """
         return self._run_query(query)
     
-    def getCitationWithinDate(self, min_date=None, max_date=None):
+    def getCitationsWithinDate(self, min_date=None, max_date=None):
         """Return citations whose creation date falls within [min_date, max_date].
         Both bounds are optional: if one is missing, that side is unbounded"""
         
@@ -249,25 +228,27 @@ class CitationQueryHandler(QueryHandler):
         if max_date:
             filters.append(f'FILTER (?creation <= "{max_date}"^^xsd:date)')
 
+        # here "creation" can't be optional so the check will always be True
         query = f"""
         PREFIX vocab: <https://example.org/vocab/>
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
         SELECT ?citation ?citing ?cited ?creation WHERE {{
             ?citation a vocab:Citation ;
-                      voca:hasCitingEntity ?citing ;
+                      vocab:hasCitingEntity ?citing ;
                       vocab:hasCitedEntity ?cited ;
                       vocab:hasCreationDate ?creation .
             {' '.join(filters)}
-        }}
+        }} 
         """
         df = self._run_query(query)
 
-        if not df.empty and "creation" in df.colums:
+        if not df.empty and "creation" in df.columns:
             df["creation"] = pd.to_datetime(df["creation"], errors="coerce")
+        # if a value is not convertible, pandas will substitute it with NaT ("Not a Time")
 
         return df
     
-    def getCitationWithinTimespan(self, min_span=None, max_span=None):
+    def getCitationsWithinTimespan(self, min_span=None, max_span=None):
         """ Return citations whose duration (timespan) falls within
         [min_span, max_span] both given as ISO8601 duration strings. 
         The comparison happens on the precomputed "days" value not on
@@ -291,7 +272,7 @@ class CitationQueryHandler(QueryHandler):
                       vocab:hasCitingEntity ?citing ;
                       vocab:hasCitedEntity ?cited ;
                       vocab:hasDuration ?duration ;
-                      vocab:hasDurationDays ?days
+                      vocab:hasDurationDays ?days .
             {' '.join(filters)}
         }}
         """
