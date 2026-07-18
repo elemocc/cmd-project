@@ -224,6 +224,30 @@ class CitationQueryHandler(QueryHandler):
         }}
         """
         return self._run_query(query)
+    
+    def getCitationWithinTimespan(self, min_span=None, max_span=None):
+        # Comparing the duration on days, previously calculated in the CitationUploadHandler
+        min_days = iso_duration_to_days(min_span) if min_span else None
+        max_days = iso_duration_to_days(max_span) if max_span else None
+
+        filters = []
+        if min_days is not None:
+            filters.append(f"FILTER (?days >= {min_days})")
+        if max_days is not None:
+            filters.append(f"FILTER (?days <= {max_days})")
+
+        query = f"""
+        PREFIX vocab: <https://example.org/vocab/>
+        SELECT ?citation ?citing ?cited ?duration ?days WHERE {{
+            ?citation a vocab:Citation ;
+                      vocab:hasCitingEntity ?citing ;
+                      vocab:hasCitedEntity ?cited ;
+                      vocab:hasDuration ?duration ;
+                      vocab:hasDurationDays ?days
+            {' '.join(filters)}
+        }}
+        """
+        return self._run_query(query)
 
 
 
