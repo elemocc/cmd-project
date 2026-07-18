@@ -162,14 +162,20 @@ class CitationQueryHandler(QueryHandler):
         sparql = SPARQLWrapper(self.dbPathOrUrl) # Creating a SPARQLWrapper object pointed to the SPARQL endpoint (Blazegraph URL)
         sparql.setQuery(query) # Setting the text for SPARQL query
         sparql.setReturnFormat(JSON) # Returning the answer in a JSON format
-        results = sparql.query().convert()
 
+        #.query() will execute the query via Blazegraph, then .convert() will transform it ina Python dictionary
+        results = sparql.query().convert()
+        
+        assert isinstance(results, dict) # Checking if "results" is a dictionary
 
         rows = []
         for binding in results["results"]["bindings"]:
             rows.append({k: v["value"] for k, v in binding.items()})
-        return pd.DataFrame(rows)
-    
+        
+        """Converting the list of dictionaries in a pandas frame: 
+        every dictionary is a row and every key is the name of a column"""
+        return pd.DataFrame(rows) 
+   
     def getAllCitations(self):
         query = """
         PREFIX vocab: <https://example.org/vocab/>
