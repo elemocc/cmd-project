@@ -29,10 +29,8 @@ class BasicQueryEngine:
             newDataFrame = handler.getById(id)
             df_list.append(newDataFrame)
 
-        #if not df_list: #if there were no dataframes and the df_list is therefore empty, the functions returns an empty list and won't try to concatenate an empty list of dataframe  
-            #return []       
-
-        matchingIdEnt = pd.concat(df_list, ignore_index=True)
+        if  df_list: #controlla che la lista non sia vuota, nel caso per esempio in cui il method sia stato chiamato senza aver prima aggiunto gli handlers all'interno degli engines. se non è vuota concatena i dataframe        
+            matchingIdEnt = pd.concat(df_list, ignore_index=True)
 
         if not matchingIdEnt.empty: #controlla che il dataframe non sia vuoto, solo se non è vuoto procede
             row = matchingIdEnt.iloc[0] #iloc prende direttamente la prima row (indice 0), visto che dovrebbe essere solo una la riga nel df
@@ -330,20 +328,20 @@ class BasicQueryEngine:
 class FullQueryEngine(BasicQueryEngine): #let's use a combination of the methods I've implemented 
     
     def __init__(self):
-        super().__init__ #this "calls" the init of the superclass
+        super().__init__() #this "calls" the init of the superclass
 
     def getAuthorSelfCitationsByName(self, author_name):
         all_author_sc = self.getAllAuthorSelfCitations()
         result = []
         for citation in all_author_sc:
             citing_ent = citation.getCitingEntity()
-            cited_ent = citation.hasCitedEntity()
+            cited_ent = citation.getCitedEntity()
+            if citing_ent is not None and cited_ent is not None:
+                citing_authors = citing_ent.getAuthors()
+                cited_authors = cited_ent.getAuthors()
 
-            citing_authors = citing_ent.getAuthors()
-            cited_authors = cited_ent.getAuthors()
-
-            if author_name in citing_authors and author_name in cited_authors:
-                result.append(citation)
+                if author_name in citing_authors and author_name in cited_authors:
+                    result.append(citation)
 
         return result
 
@@ -353,12 +351,45 @@ class FullQueryEngine(BasicQueryEngine): #let's use a combination of the methods
         for citation in all_journal_sc:
             citing_ent = citation.getCitingEntity()
             cited_ent = citation.getCitedEntity()
+            if citing_ent is not None and cited_ent is not None:
+                citing_journal = citing_ent.getVenue()
+                cited_journal =  cited_ent.getVenue()
 
-            citing_journal = citing_ent.getVenue()
-            cited_journal =  cited_ent.getVenue()
+                if journal_name == citing_journal and journal_name == cited_journal:
 
-            if journal_name == citing_journal and journal_name == cited_journal
-            
-                result.append(citation)
+                    result.append(citation)
 
         return result
+
+
+    def getCitationsOfBibEntityByTitleWithinDate(self, bib_entity_title, min_date, max_date):
+        all_citations = self.getAllCitations()
+        result = []
+
+        for citation in all_citations:
+            cited = citation.getCitedEntity()
+            if cited is not None:
+                cited_title = cited.getTitle()
+
+                if bib_entity_title.lower() in cited_title.lower():
+                    cited_date = cited.getPublicationDate()
+                    if cited_date <= max_date and cited_date >= min_date:
+                        result.append(citation)
+        
+        return result
+
+    
+    def getReferencesOfBibEntityByTitleWithinTimespan(self, bib_entity_title, min_timespan, max_timespan):
+        citations_within_timespan = self.getCitationsWithinTimespan(min_timespan, max_timespan)
+        result = []
+
+        for citation in citations_within_timespan:
+            citing = citation.getCitingEntity()
+            if citing is not None:
+                citing_title = citing.getTitle()
+
+                if bib_entity_title.lower() in citing_title.lower():
+                    result.append(citation)
+        
+        return result
+
