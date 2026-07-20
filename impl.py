@@ -44,8 +44,8 @@ class Citation(IdentifiableEntity):
         # Attributes
         self.creation = ""
         self.timespan = ""
-        self.hasCitingEntity = None
-        self.hasCitedEntity = None
+        self.hasCitingEntity: BibliographicEntity | None = None
+        self.hasCitedEntity: BibliographicEntity | None = None
 
 
     # Methods
@@ -55,10 +55,10 @@ class Citation(IdentifiableEntity):
     def getTimespan(self) -> str:
         return self.timespan
     
-    def getCitingEntity(self) -> BibliographicEntity:
+    def getCitingEntity(self) -> BibliographicEntity | None:
         return self.hasCitingEntity
     
-    def getCitedEntity(self) -> BibliographicEntity:
+    def getCitedEntity(self) -> BibliographicEntity | None:
         return self.hasCitedEntity
 
 # 4: JournalSelfCitation. The subclass of Citation for journal self-citation in which
