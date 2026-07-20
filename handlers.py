@@ -205,6 +205,35 @@ class CitationQueryHandler(QueryHandler):
         every dictionary is a row and every key is the name of a column"""
         return pd.DataFrame(rows) 
    
+    def getById(self, id: str) -> pd.DataFrame:
+        query = f"""
+        PREFIX vocab: <https://example.org/vocab/>
+
+        SELECT ?citation ?citing ?cited ?creation ?duration ?days
+        WHERE {{
+            ?citation a vocab:Citation ;
+                      vocab:hasCitingEntity ?citing ;
+                      vocab:hasCitedEntity ?cited .
+
+            FILTER(STRENDS(STR(?citation), "citation-{id}"))
+
+            OPTIONAL {{ ?citation vocab:hasCreationDate ?creation }}
+            OPTIONAL {{ ?citation vocab:hasDuration ?duration }}
+            OPTIONAL {{ ?citation vocab:hasDurationDays ?days }}
+        }}
+        """
+
+        df = self._run_query(query)
+
+        if not df.empty:
+            if "creation" in df.columns:
+                df["creation"] = pd.to_datetime(df["creation"], errors="coerce")
+            if "days" in df.columns:
+                df["days"] = pd.to_numeric(df["days"], errors="coerce")
+
+        return df
+
+
     def getAllCitations(self):
         """Return all citations including the ones without a known creation
         date or duration (which is OPTIONAL)"""
@@ -259,6 +288,29 @@ class CitationQueryHandler(QueryHandler):
         """Return citations whose creation date falls within [min_date, max_date].
         Both bounds are optional: if one is missing, that side is unbounded"""
         
+        def pad_start(date_str):
+            if not date_str:
+                return None
+            date_str = date_str.strip()
+            if len(date_str) == 4:      # YYYY
+                return date_str + "-01-01"
+            if len(date_str) == 7:      # YYYY-MM
+                return date_str + "-01"
+            return date_str
+
+        def pad_end(date_str):
+            if not date_str:
+                return None
+            date_str = date_str.strip()
+            if len(date_str) == 4:      # YYYY
+                return date_str + "-12-31"
+            if len(date_str) == 7:      # YYYY-MM
+                return date_str + "-31"
+            return date_str
+
+        min_date = pad_start(min_date)
+        max_date = pad_end(max_date)
+
         # Build the FILTER clauses dynamically, only for the bounds provided
         filters = []
         if min_date:
@@ -439,8 +491,8 @@ class BibliographicEntityQueryHandler(QueryHandler):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
             query = """
                 SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author, ';') as authors,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id, ';') as ids
+                       GROUP_CONCAT(BibliographicEntity_Authors.author, ';') as authors,
+                       GROUP_CONCAT(BibliographicEntity_ID.id, ';') as ids
                 FROM BibliographicEntity_Metadata
                 LEFT JOIN BibliographicEntity_Authors 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
@@ -452,13 +504,13 @@ class BibliographicEntityQueryHandler(QueryHandler):
                 GROUP BY BibliographicEntity_Metadata.internal_id
             """   
             return pd.read_sql(query, con, params=(id,))
-
+    
     def getAllBibliographicEntities(self):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
             query = """
                 SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author, ';') as authors,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id, ';') as ids
+                       GROUP_CONCAT(BibliographicEntity_Authors.author, ';') as authors,
+                       GROUP_CONCAT(BibliographicEntity_ID.id, ';') as ids
                 FROM BibliographicEntity_Metadata
                 LEFT JOIN BibliographicEntity_Authors 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
@@ -472,8 +524,8 @@ class BibliographicEntityQueryHandler(QueryHandler):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
             query = """
             SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author, ';') as authors,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id, ';') as ids
+                       GROUP_CONCAT(BibliographicEntity_Authors.author, ';') as authors,
+                       GROUP_CONCAT(BibliographicEntity_ID.id, ';') as ids
                 FROM BibliographicEntity_Metadata
                 LEFT JOIN BibliographicEntity_Authors 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
@@ -488,8 +540,8 @@ class BibliographicEntityQueryHandler(QueryHandler):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
             query = """
             SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author, ';') as authors,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id, ';') as ids
+                       GROUP_CONCAT(BibliographicEntity_Authors.author, ';') as authors,
+                       GROUP_CONCAT(BibliographicEntity_ID.id, ';') as ids
                 FROM BibliographicEntity_Metadata
                 LEFT JOIN BibliographicEntity_Authors 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
@@ -547,8 +599,8 @@ class BibliographicEntityQueryHandler(QueryHandler):
 
             query = f"""
                 SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author, ';') as authors,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id, ';') as ids
+                       GROUP_CONCAT(BibliographicEntity_Authors.author, ';') as authors,
+                       GROUP_CONCAT(BibliographicEntity_ID.id, ';') as ids
                 FROM BibliographicEntity_Metadata
                 LEFT JOIN BibliographicEntity_Authors 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id
@@ -564,8 +616,8 @@ class BibliographicEntityQueryHandler(QueryHandler):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
             query = """
             SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_Authors.author, ';') as authors,
-                       GROUP_CONCAT(DISTINCT BibliographicEntity_ID.id, ';') as ids
+                       GROUP_CONCAT(BibliographicEntity_Authors.author, ';') as authors,
+                       GROUP_CONCAT(BibliographicEntity_ID.id, ';') as ids
                 FROM BibliographicEntity_Metadata
                 LEFT JOIN BibliographicEntity_Authors 
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_Authors.internal_id

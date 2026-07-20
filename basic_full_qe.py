@@ -66,8 +66,8 @@ class BasicQueryEngine:
                     citWithId = Citation()
                 
                 citWithId.creation = row["creation"]
-                citWithId.timespan = row["timespan"]
-                citWithId.ids = [row["oci"]]
+                citWithId.timespan = row["duration"]
+                citWithId.ids = [row["citation"]]
                 citWithId.hasCitingEntity = self.getEntityById(row["citing"])
                 citWithId.hasCitedEntity = self.getEntityById(row["cited"])
                                     
@@ -96,8 +96,8 @@ class BasicQueryEngine:
         for idx, row in allCitations.iterrows():
             citation = Citation() #aggiunto manualmente uno a uno gli attributi dell'oggetto Citation visto che non accetta parametri
             citation.creation = row["creation"]
-            citation.timespan = row["timespan"]
-            citation.ids = [row["oci"]]
+            citation.timespan = row["duration"]
+            citation.ids = [row["citation"]]
             citation.hasCitingEntity = self.getEntityById(row["citing"])
             citation.hasCitedEntity = self.getEntityById(row["cited"]) 
 
@@ -220,10 +220,10 @@ class BasicQueryEngine:
         for idx, row in authorSelfCitDf.iterrows():
             author_sc = AuthorSelfCitation()
             author_sc.creation = row["creation"]
-            author_sc.timespan = row["timespan"]
+            author_sc.timespan = row["duration"]
             author_sc.hasCitingEntity = self.getEntityById(row["citing"])
             author_sc.hasCitedEntity = self.getEntityById(row["cited"])
-            author_sc.ids = [row["oci"]]
+            author_sc.ids = [row["citation"]]
 
             all_author_sc.append(author_sc)
         
@@ -244,10 +244,10 @@ class BasicQueryEngine:
         for idx, row in journalSelfCitDf.iterrows():
             journal_sc = JournalSelfCitation()
             journal_sc.creation = row["creation"]
-            journal_sc.timespan = row["timespan"]
+            journal_sc.timespan = row["duration"]
             journal_sc.hasCitingEntity = self.getEntityById(row["citing"])
             journal_sc.hasCitedEntity = self.getEntityById(row["cited"])
-            journal_sc.ids = [row["oci"]]
+            journal_sc.ids = [row["citation"]]
 
             all_journal_sc.append(journal_sc)
         
@@ -268,8 +268,8 @@ class BasicQueryEngine:
         for idx, row in CitTimespanDf.iterrows():
             citation = Citation() #aggiunto manualmente uno a uno gli attributi dell'oggetto Citation visto che non accetta parametri
             citation.creation = row["creation"]
-            citation.timespan = row["timespan"]
-            citation.ids = [row["oci"]]
+            citation.timespan = row["duration"]
+            citation.ids = [row["citation"]]
             citation.hasCitingEntity = self.getEntityById(row["citing"])
             citation.hasCitedEntity = self.getEntityById(row["cited"])
 
@@ -317,8 +317,8 @@ class BasicQueryEngine:
         for idx, row in citationWithinDate.iterrows():
             citation = Citation() #aggiunto manualmente uno a uno gli attributi dell'oggetto Citation visto che non accetta parametri
             citation.creation = row["creation"]
-            citation.timespan = row["timespan"]
-            citation.ids = [row["oci"]]
+            citation.timespan = row["duration"]
+            citation.ids = [row["citation"]]
             citation.hasCitingEntity = self.getEntityById(row["citing"])
             citation.hasCitedEntity = self.getEntityById(row["cited"]) 
 
