@@ -159,7 +159,9 @@ class BibliographicEntityQueryHandler(QueryHandler):
                 )
                 GROUP BY BibliographicEntity_Metadata.internal_id
             """   
-            return pd.read_sql(query, con, params=(id,))
+            df = pd.read_sql(query, con, params=(id,))
+            con.close()
+            return df
     
     def getAllBibliographicEntities(self):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
@@ -174,7 +176,9 @@ class BibliographicEntityQueryHandler(QueryHandler):
                     ON BibliographicEntity_Metadata.internal_id = BibliographicEntity_ID.internal_id
                 GROUP BY BibliographicEntity_Metadata.internal_id
             """   
-            return pd.read_sql(query, con)
+            df = pd.read_sql(query, con)
+            con.close()
+            return df
 
     def  getBibliographicEntitiesWithTitle(self, title):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
@@ -190,7 +194,9 @@ class BibliographicEntityQueryHandler(QueryHandler):
                 WHERE BibliographicEntity_Metadata.title LIKE ?
                 GROUP BY BibliographicEntity_Metadata.internal_id    
             """   
-            return pd.read_sql(query, con, params=(f"%{title}%",)) 
+            df = pd.read_sql(query, con, params=(f"%{title}%",))
+            con.close()
+            return df 
 
     def  getBibliographicEntitiesWithAuthor(self, author):
         with sqlite3.connect(self.getDbPathOrUrl()) as con:
@@ -208,7 +214,9 @@ class BibliographicEntityQueryHandler(QueryHandler):
                 )
                 GROUP BY BibliographicEntity_Metadata.internal_id    
             """   
-            return pd.read_sql(query, con, params=(f"%{author}%",))
+            df = pd.read_sql(query, con, params=(f"%{author}%",))
+            con.close()
+            return df
         
         #qui ho fatto una "sottoquery" perché altrimenti si perdevano tutti i co-autori 
 
@@ -265,7 +273,9 @@ class BibliographicEntityQueryHandler(QueryHandler):
                 WHERE {" AND ".join(where_clauses)}
                 GROUP BY BibliographicEntity_Metadata.internal_id
             """
-            return pd.read_sql(query, con, params=params)
+            df = pd.read_sql(query, con, params=params)
+            con.close()
+            return df
     
 
     def getBibliographicEntitiesWithVenue(self, venue):
@@ -282,6 +292,8 @@ class BibliographicEntityQueryHandler(QueryHandler):
                 WHERE BibliographicEntity_Metadata.venue LIKE ?
                 GROUP BY BibliographicEntity_Metadata.internal_id    
             """   
-            return pd.read_sql(query, con, params=(f"%{venue}%",))
+            df = pd.read_sql(query, con, params=(f"%{venue}%",))
+            con.close()
+            return df
     
 
