@@ -22,10 +22,10 @@ class BasicQueryEngine:
         self.bibliographicEntityQuery.append(handler)
         return True
     
-    def getEntityById(self, id):
-        matchingIdEnt = pd.DataFrame()
-        df_list = []
-        for handler in self.bibliographicEntityQuery:
+    def getEntityById(self, id): #search for a specified ID among the citations and/or the bibliographic entities contained in the two databases
+        matchingIdEnt = pd.DataFrame() #create an empty dataframe which will contain the possible matching bibliogrphic entity/citation returned by the handlers
+        df_list = [] #create an empty list where to store the dataframes returne by the handlers
+        for handler in self.bibliographicEntityQuery: #for each handler, ask the
             newDataFrame = handler.getById(id)
             df_list.append(newDataFrame)
 

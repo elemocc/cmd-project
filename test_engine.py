@@ -79,7 +79,7 @@ class MockCitationHandler:
 # ==========================================
 def run_test():
     print("Inizializzo il FullQueryEngine...")
-    que = FullQueryEngine()
+    engine = FullQueryEngine()
     
     print("Aggiungo gli handler...")
     engine.addBibliographicEntityHandler(MockBibliographicHandler())
@@ -158,8 +158,6 @@ def run_test():
     for c in cit_date:
         print(f" -> Citazione ID: {c.ids[0]} | Creata il: {c.creation}")
     
-
-
 
 
 
