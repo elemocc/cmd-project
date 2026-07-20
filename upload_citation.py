@@ -7,6 +7,37 @@ import pandas as pd
 from csv import DictReader
 from abc import ABC, abstractmethod    
 
+# Class Handler (superclass)
+class Handler:
+    def __init__(self):
+        self.dbPathOrUrl = ""
+    
+    def getDbPathOrUrl(self):
+        return self.dbPathOrUrl
+    
+    def setDbPathOrUrl(self, dbPathOrUrl: str) -> bool:
+        try:
+            self.dbPathOrUrl = dbPathOrUrl
+            return True
+        except Exception as e:
+            return False
+    
+
+# Upload Handler
+
+class UploadHandler(Handler):
+    def __init__(self):
+        super().__init__()
+
+    def pushDataToDb(self, path: str) -> bool:
+        raise NotImplementedError
+    
+class QueryHandler(Handler):
+    def __init__(self):
+        super().__init__()
+
+    def getById(self, id: str) -> pd.DataFrame:
+        raise NotImplementedError
 
 # Alice Machieraldo ––––––––––– CitationUploadHandler –––––––––––
 
@@ -220,7 +251,30 @@ class CitationQueryHandler(QueryHandler):
     def getCitationsWithinDate(self, min_date=None, max_date=None):
         """Return citations whose creation date falls within [min_date, max_date].
         Both bounds are optional: if one is missing, that side is unbounded"""
-        
+
+        def pad_start(date_str):
+            if not date_str:
+                return None
+            date_str = date_str.strip()
+            if len(date_str) == 4:      # YYYY
+                return date_str + "-01-01"
+            if len(date_str) == 7:      # YYYY-MM
+                return date_str + "-01"
+            return date_str
+
+        def pad_end(date_str):
+            if not date_str:
+                return None
+            date_str = date_str.strip()
+            if len(date_str) == 4:      # YYYY
+                return date_str + "-12-31"
+            if len(date_str) == 7:      # YYYY-MM
+                return date_str + "-31"
+            return date_str
+
+        min_date = pad_start(min_date)
+        max_date = pad_end(max_date)
+            
         # Build the FILTER clauses dynamically, only for the bounds provided
         filters = []
         if min_date:
