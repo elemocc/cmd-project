@@ -52,6 +52,17 @@ def iso_duration_to_days(duration):
     years, months, days = (int(x) if x else 0 for x in m.groups())
     return years * 365 + months * 30 + days
 
+def normalize_creation_date(date_str):
+    """Porta le date parziali (YYYY o YYYY-MM) al formato completo YYYY-MM-DD
+    richiesto da xsd:date"""
+    if not date_str:
+        return None
+    date_str = date_str.strip()
+    if len(date_str) == 4:        # "2010" -> "2010-01-01"
+        return date_str + "-01-01"
+    if len(date_str) == 7:        # "2010-03" -> "2010-03-01"
+        return date_str + "-01"
+    return date_str               # già completa (YYYY-MM-DD)
 
 class CitationUploadHandler(UploadHandler): 
     """This class implements the method of the superclass to handle 
@@ -112,9 +123,15 @@ class CitationUploadHandler(UploadHandler):
                 my_graph.add((subj, citing_prop, citing_entity))
                 my_graph.add((subj, cited_prop, cited_entity))
 
-                # Adding the date: creating a Literal specifyng the type as XSD.date
+                # Adding the date: normalizing partial dates (YYYY / YYYY-MM) before
+                # creating a Literal typed as XSD.date, otherwise rdflib fails on serialization
                 if row["creation"]:
-                    my_graph.add((subj, creation, Literal(row["creation"], datatype=XSD.date)))
+                    norm_creation = normalize_creation_date(row["creation"])
+                    if norm_creation:
+                        try:
+                            my_graph.add((subj, creation, Literal(norm_creation, datatype=XSD.date)))
+                        except Exception as e:
+                            print(f"Skipping invalid creation date '{row['creation']}' for {row['oci']}: {e}")
 
                 """ Adding the timespan: saving the original value as a string
                 then calling the function iso_duration_days for retrieving the
@@ -199,6 +216,7 @@ class CitationQueryHandler(QueryHandler):
         every dictionary is a row and every key is the name of a column"""
         return pd.DataFrame(rows) 
     
+    # Implementing getById for the QueryHandler
     def getById(self, id: str) -> pd.DataFrame:
         query = f"""
         PREFIX vocab: <https://example.org/vocab/>
