@@ -3,7 +3,6 @@ import json
 import sqlite3
 import pandas as pd
 from pandas import DataFrame
-from abc import ABC, abstractmethod
 import re
 
 # Class Handler (superclass)
@@ -132,7 +131,7 @@ class BibliographicEntityUploadHandler(UploadHandler):
             return False
 
 
-class QueryHandler(Handler, ABC):
+class QueryHandler(Handler):
     def __init__(self):
         super().__init__()
 
