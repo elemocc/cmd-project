@@ -14,15 +14,15 @@ class BasicQueryEngine:
         self.bibliographicEntityQuery = []
         return True
 
-    def addCitationHandler(self, handler): #add the handler to the empty list creatd within the init   
+    def addCitationHandler(self, handler: CitationQueryHandler) -> bool: #add the handler to the empty list creatd within the init   
         self.citationQuery.append(handler)
         return True 
 
-    def addBibliographicEntityHandler(self, handler): #add the handler to the empty list creatd within the init
+    def addBibliographicEntityHandler(self, handler: BibliographicEntityQueryHandler) -> bool: #add the handler to the empty list creatd within the init
         self.bibliographicEntityQuery.append(handler)
         return True
     
-    def getEntityById(self, id): #search for a specified ID among the citations and/or the bibliographic entities contained in the two databases
+    def getEntityById(self, id: str): #search for a specified ID among the citations and/or the bibliographic entities contained in the two databases
         matchingIdEnt = pd.DataFrame() #create an empty dataframe which will contain the possible matching bibliogrphic entity/citation returned by the handlers
         df_list = [] #create an empty list where to store the dataframes returne by the handlers
         for handler in self.bibliographicEntityQuery: #for each handler, ask the
@@ -78,7 +78,7 @@ class BasicQueryEngine:
 
 
     
-    def getAllCitations(self):  #get all the citations from the handlers stored in the self.citationQuery list
+    def getAllCitations(self) -> list[Citation]:  #get all the citations from the handlers stored in the self.citationQuery list
         allCitations = pd.DataFrame()   #create a new empy dataframe where to store all the dataframe concatenated  
         df_list = []    #create an empty list which will contain all the dataframes from the handlers 
         for handler in self.citationQuery:  #iterate over the dataframe retriev by Silvia's handlers
@@ -180,7 +180,7 @@ class BasicQueryEngine:
         
         return all_bib_ent_title
     
-    def getBibliographicEntitiesWithVenue(self, venue):
+    def getBibliographicEntitiesWithVenue(self, venue: str) -> list[BibliographicEntity]:
         df_list = [] 
         for handler in self.bibliographicEntityQuery:
             newDataFrame = handler.getBibliographicEntitiesWithVenue(venue)   #NewDataFrame contains all the bib ent matching with the specified author
@@ -204,7 +204,7 @@ class BasicQueryEngine:
         
         return all_bib_ent_venue
     
-    def getAllAuthorSelfCitations(self):
+    def getAllAuthorSelfCitations(self) -> list[AuthorSelfCitation]:
         df_list = []
         for handler in self.citationQuery:
             newDataFrame = handler.getAllAuthorSelfCitations()
@@ -228,7 +228,7 @@ class BasicQueryEngine:
         
         return all_author_sc
     
-    def getAllJournalSelfCitations(self):
+    def getAllJournalSelfCitations(self)-> list[JournalSelfCitation]:
         df_list = []
         for handler in self.citationQuery:
             newDataFrame = handler.getAllJournalSelfCitations()
@@ -252,7 +252,7 @@ class BasicQueryEngine:
         
         return all_journal_sc
     
-    def getCitationsWithinTimespan(self, min_timespan, max_timespan): #CONTROLLARE PER CITED E CITING, SISTEMARE CODICE
+    def getCitationsWithinTimespan(self, min_timespan: str, max_timespan: str) -> list[Citation]: #CONTROLLARE PER CITED E CITING, SISTEMARE CODICE
         df_list = []
         for handler in self.citationQuery: 
             newDataFrame = handler.getCitationsWithinTimespan(min_timespan, max_timespan)
@@ -301,7 +301,7 @@ class BasicQueryEngine:
         return all_bib_ent_date
 
     
-    def getCitationsWithinDate(self, start_date, end_date):
+    def getCitationsWithinDate(self, start_date: str, end_date: str) -> list[Citation]:
         df_list = [] 
         for handler in self.citationQuery:
             newDataFrame = handler.getCitationsWithinDate(start_date, end_date)   #NewDataFrame contains all the bib ent matching with the specified author
@@ -330,7 +330,7 @@ class FullQueryEngine(BasicQueryEngine): #let's use a combination of the methods
     def __init__(self):
         super().__init__() #this "calls" the init of the superclass
 
-    def getAuthorSelfCitationsByName(self, author_name):
+    def getAuthorSelfCitationsByName(self, author_name: str) -> list[AuthorSelfCitation]:
         all_author_sc = self.getAllAuthorSelfCitations()
         result = []
         for citation in all_author_sc:
@@ -345,7 +345,7 @@ class FullQueryEngine(BasicQueryEngine): #let's use a combination of the methods
 
         return result
 
-    def getJournalSelfCitationsByName(self, journal_name):
+    def getJournalSelfCitationsByName(self, journal_name: str) -> list[JournalSelfCitation]:
         all_journal_sc = self.getAllJournalSelfCitations()
         result = []
         for citation in all_journal_sc:
@@ -362,7 +362,7 @@ class FullQueryEngine(BasicQueryEngine): #let's use a combination of the methods
         return result
 
 
-    def getCitationsOfBibEntityByTitleWithinDate(self, bib_entity_title, min_date, max_date):
+    def getCitationsOfBibEntityByTitleWithinDate(self, bib_entity_title: str, min_date: str, max_date: str) -> list[Citation]:
         all_citations = self.getAllCitations()
         result = []
 
@@ -379,7 +379,7 @@ class FullQueryEngine(BasicQueryEngine): #let's use a combination of the methods
         return result
 
     
-    def getReferencesOfBibEntityByTitleWithinTimespan(self, bib_entity_title, min_timespan, max_timespan):
+    def getReferencesOfBibEntityByTitleWithinTimespan(self, bib_entity_title: str, min_timespan: str, max_timespan: str) -> list[Citation]:
         citations_within_timespan = self.getCitationsWithinTimespan(min_timespan, max_timespan)
         result = []
 
