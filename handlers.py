@@ -677,3 +677,8 @@ class BibliographicEntityQueryHandler(QueryHandler):
             df = pd.read_sql(query, con, params=(f"%{venue}%",))
             con.close()
             return df
+
+if __name__ == "__main__":
+    handler= CitationQueryHandler()
+    handler.setDbPathOrUrl("http://192.168.1.73:9999/blazegraph/sparql")
+

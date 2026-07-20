@@ -38,10 +38,10 @@ class BasicQueryEngine:
             
             bibEntWithId = BibliographicEntity()
             bibEntWithId.title = row["title"]
-            bibEntWithId.authors = [row["author"]]
+            bibEntWithId.authors = [row["authors"]]
             bibEntWithId.pub_date = row["pub_date"]
             bibEntWithId.venue = row["venue"]
-            bibEntWithId.ids = [row["id"]]
+            bibEntWithId.ids = [row["ids"]]
 
             return bibEntWithId
         
@@ -122,10 +122,10 @@ class BasicQueryEngine:
         for idx, row in allBibEnt.iterrows():
             bibEnt = BibliographicEntity() #aggiunto manualmente uno a uno gli attributi dell'oggetto BibliographicEntity visto che non accetta parametri
             bibEnt.title = row["title"]
-            bibEnt.authors = [row["author"]]
+            bibEnt.authors = [row["authors"]]
             bibEnt.pub_date = row["pub_date"]
             bibEnt.venue = row["venue"]
-            bibEnt.ids = [row["id"]] 
+            bibEnt.ids = [row["ids"]] 
 
             all_bib_ent.append(bibEnt)
         
@@ -147,10 +147,10 @@ class BasicQueryEngine:
         for idx, row in bibEntWithTitle.iterrows(): #the for loop iterates over the dataframe creating new BibliographicEntity() objects and appending them to the list that will be return at the end
             bibEnt = BibliographicEntity() #aggiunto manualmente uno a uno gli attributi dell'oggetto BibliographicEntity visto che non accetta parametri
             bibEnt.title = row["title"]
-            bibEnt.authors = [row["author"]]
+            bibEnt.authors = [row["authors"]]
             bibEnt.pub_date = row["pub_date"]
             bibEnt.venue = row["venue"]
-            bibEnt.ids = [row["id"]] 
+            bibEnt.ids = [row["ids"]] 
 
             all_bib_ent_title.append(bibEnt)
         
@@ -172,10 +172,10 @@ class BasicQueryEngine:
         for idx, row in bibEntWithAuthor.iterrows(): #the for loop iterates over the dataframe creating new BibliographicEntity() objects and appending them to the list that will be return at the end
             bibEnt = BibliographicEntity() #aggiunto manualmente uno a uno gli attributi dell'oggetto BibliographicEntity visto che non accetta parametri
             bibEnt.title = row["title"]
-            bibEnt.authors = [row["author"]]
+            bibEnt.authors = [row["authors"]]
             bibEnt.pub_date = row["pub_date"]
             bibEnt.venue = row["venue"]
-            bibEnt.ids = [row["id"]] 
+            bibEnt.ids = [row["ids"]] 
 
             all_bib_ent_title.append(bibEnt)
         
@@ -196,10 +196,10 @@ class BasicQueryEngine:
         for idx, row in bibEntWithVenue.iterrows(): #the for loop iterates over the dataframe creating new BibliographicEntity() objects and appending them to the list that will be return at the end
             bibEnt = BibliographicEntity() #aggiunto manualmente uno a uno gli attributi dell'oggetto BibliographicEntity visto che non accetta parametri
             bibEnt.title = row["title"]
-            bibEnt.authors = [row["author"]]
+            bibEnt.authors = [row["authors"]]
             bibEnt.pub_date = row["pub_date"]
             bibEnt.venue = row["venue"]
-            bibEnt.ids = [row["id"]] 
+            bibEnt.ids = [row["ids"]] 
 
             all_bib_ent_venue.append(bibEnt)
         
@@ -292,10 +292,10 @@ class BasicQueryEngine:
         for idx, row in bibEntWithinDate.iterrows(): #the for loop iterates over the dataframe creating new BibliographicEntity() objects and appending them to the list that will be return at the end
             bibEnt = BibliographicEntity() #aggiunto manualmente uno a uno gli attributi dell'oggetto BibliographicEntity visto che non accetta parametri
             bibEnt.title = row["title"]
-            bibEnt.authors = [row["author"]]
+            bibEnt.authors = [row["authors"]]
             bibEnt.pub_date = row["pub_date"]
             bibEnt.venue = row["venue"]
-            bibEnt.ids = [row["id"]] 
+            bibEnt.ids = [row["ids"]] 
 
             all_bib_ent_date.append(bibEnt)
         
@@ -393,3 +393,15 @@ class FullQueryEngine(BasicQueryEngine): #let's use a combination of the methods
                     result.append(citation)
         
         return result
+
+
+if __name__ == "__main__":
+    cit_qh = CitationQueryHandler()
+    cit_qh.setDbPathOrUrl("http://192.168.1.73:9999/blazegraph/sparql")
+    bib_qh = BibliographicEntityQueryHandler()
+    bib_qh.setDbPathOrUrl("relational.db")
+    que = BasicQueryEngine()
+    que.addCitationHandler(cit_qh)
+    que.addBibliographicEntityHandler(bib_qh)           
+
+
