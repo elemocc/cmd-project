@@ -222,17 +222,24 @@ class CitationQueryHandler(QueryHandler):
         every dictionary is a row and every key is the name of a column"""
         return pd.DataFrame(rows) 
    
+       # Implementing getById for the QueryHandler
     def getById(self, id: str) -> pd.DataFrame:
+        # Costruisco direttamente l'URI del soggetto, invece di usare
+        # FILTER(STRENDS(...)) su una stringa concatenata a mano: più
+        # sicuro (niente rischio di rompere la sintassi SPARQL con
+        # caratteri strani nell'id) e più efficiente per Blazegraph
+        base_url = getattr(self, "base_url", "https://example.org/")
+        citation_uri = f"<{base_url}res/citation-{id}>"
+
         query = f"""
         PREFIX vocab: <https://example.org/vocab/>
 
         SELECT ?citation ?citing ?cited ?creation ?duration ?days
         WHERE {{
+            BIND({citation_uri} AS ?citation)
             ?citation a vocab:Citation ;
                       vocab:hasCitingEntity ?citing ;
                       vocab:hasCitedEntity ?cited .
-
-            FILTER(STRENDS(STR(?citation), "citation-{id}"))
 
             OPTIONAL {{ ?citation vocab:hasCreationDate ?creation }}
             OPTIONAL {{ ?citation vocab:hasDuration ?duration }}
