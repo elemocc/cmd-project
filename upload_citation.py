@@ -167,6 +167,7 @@ class CitationQueryHandler(QueryHandler):
     def __init__(self):
         super().__init__()
 
+
     def _run_query(self, query):
         sparql = SPARQLWrapper(self.dbPathOrUrl) # Creating a SPARQLWrapper object pointed to the SPARQL endpoint (Blazegraph URL)
         sparql.setQuery(query) # Setting the text for SPARQL query
@@ -197,6 +198,34 @@ class CitationQueryHandler(QueryHandler):
         """Converting the list of dictionaries in a pandas frame: 
         every dictionary is a row and every key is the name of a column"""
         return pd.DataFrame(rows) 
+    
+    def getById(self, id: str) -> pd.DataFrame:
+        query = f"""
+        PREFIX vocab: <https://example.org/vocab/>
+
+        SELECT ?citation ?citing ?cited ?creation ?duration ?days
+        WHERE {{
+            ?citation a vocab:Citation ;
+                      vocab:hasCitingEntity ?citing ;
+                      vocab:hasCitedEntity ?cited .
+
+            FILTER(STRENDS(STR(?citation), "citation-{id}"))
+
+            OPTIONAL {{ ?citation vocab:hasCreationDate ?creation }}
+            OPTIONAL {{ ?citation vocab:hasDuration ?duration }}
+            OPTIONAL {{ ?citation vocab:hasDurationDays ?days }}
+        }}
+        """
+
+        df = self._run_query(query)
+
+        if not df.empty:
+            if "creation" in df.columns:
+                df["creation"] = pd.to_datetime(df["creation"], errors="coerce")
+            if "days" in df.columns:
+                df["days"] = pd.to_numeric(df["days"], errors="coerce")
+
+        return df
    
     def getAllCitations(self):
         """Return all citations including the ones without a known creation
