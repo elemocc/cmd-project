@@ -282,31 +282,41 @@ class CitationQueryHandler(QueryHandler):
 
         return df
 
-    def getAllAuthorSelfCitations(self):
+    def getAllAuthorSelfCitations(self):    #modificato da elena il 20/07 per ovviare al problema della mancanza dei campi opzionali per ?creation e ?duration
         """Return only the citations flagged as author self-citations 
         (author_sc == "yes" in the original CSV)"""
         query = """
         PREFIX vocab: <https://example.org/vocab/>
-        SELECT ?citation ?citing ?cited WHERE {
+        SELECT ?citation ?citing ?cited ?creation ?duration WHERE {
             ?citation a vocab:AuthorSelfCitation ;
                       vocab:hasCitingEntity ?citing ; 
                       vocab:hasCitedEntity ?cited .
+            OPTIONAL { ?citation vocab:hasCreationDate ?creation }
+            OPTIONAL { ?citation vocab:hasDuration ?duration }
         }
         """
-        return self._run_query(query)
+        df = self._run_query(query)
+        if not df.empty and "creation" in df.columns:
+            df["creation"] = pd.to_datetime(df["creation"], errors="coerce")
+        return df
     
-    def getAllJournalSelfCitations(self):
+    def getAllJournalSelfCitations(self): #modificato da elena il 20/07 per ovviare al problema della mancanza dei campi opzionali per ?creation e ?duration
         """Return only the citations flagged as journal self-citations
         (journal_sc == "yes" in the original CSV)"""
         query = """
         PREFIX vocab: <https://example.org/vocab/>
-        SELECT ?citation ?citing ?cited WHERE {
+        SELECT ?citation ?citing ?cited ?creation ?duration WHERE {
             ?citation a vocab:JournalSelfCitation ;
                       vocab:hasCitingEntity ?citing ;
                       vocab:hasCitedEntity ?cited .
+            OPTIONAL { ?citation vocab:hasCreationDate ?creation }
+            OPTIONAL { ?citation vocab:hasDuration ?duration }
         }
         """
-        return self._run_query(query)
+        df = self._run_query(query)
+        if not df.empty and "creation" in df.columns:
+            df["creation"] = pd.to_datetime(df["creation"], errors="coerce")
+        return df
     
     def getCitationsWithinDate(self, min_date=None, max_date=None):
         """Return citations whose creation date falls within [min_date, max_date].
@@ -396,11 +406,7 @@ class CitationQueryHandler(QueryHandler):
         if not df.empty and "days" in df.columns:
             df["days"] = pd.to_numeric(df["days"])
 
-        return df
-
-
-
-        
+        return df        
 
     
 # Bibliographic Entity Upload Handler
