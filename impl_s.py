@@ -28,9 +28,8 @@ class UploadHandler(Handler):
     def __init__(self):
         super().__init__()
 
-    @abstractmethod
     def pushDataToDb(self, path: str) -> bool:
-        pass
+        raise NotImplementedError
     
 # Bibliographic Entity Upload Handler
 
@@ -137,9 +136,8 @@ class QueryHandler(Handler, ABC):
     def __init__(self):
         super().__init__()
 
-    @abstractmethod
     def getById(self, id: str) -> pd.DataFrame:
-        pass
+        raise NotImplementedError
 
 # Qui il query handler, usando SQL
 class BibliographicEntityQueryHandler(QueryHandler):
