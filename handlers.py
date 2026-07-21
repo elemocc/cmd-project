@@ -424,25 +424,12 @@ class CitationQueryHandler(QueryHandler):
 
         return df        
 
-    
-# Bibliographic Entity Upload Handler
+# Silvia Baldassarri ––––––––––– BibliographicEntityUploadHandler –––––––––––
 
-# I dati contenuti nel JSON sono strutturati come in esempio:
-# {
-#   "title": "...",
-#   "author": ["Nome1", "Nome2"],
-#   "pub_date": "...",
-#   "venue": "...",
-#   "id": ["omid:br/...", "doi:...", "isbn:..."]
-# }
-
-
-# Creo una funzione che converte una data parziale (YYYY, YYYY-MM, YYYY-MM-DD) 
-# in un formato YYYY-MM-DD completo, usando 01 come mese/giorno 
-# di default quando mancanti. Restituisce stringa vuota se il formato 
-# non è valido o il valore è vuoto. Sarà necessaria per normalizzare i dati della publication date prima 
-# di pusharli nel database e evitare problemi nelle queries
 def normalize_pub_date(date_str):
+    """Converting a partial publication date (YYYY, YYYY-MM or YYYY-MM-DD) into
+    a complete YYYY-MM-DD format, using "01" as the default month/day when
+    missing"""
     if not date_str:
         return ""
     
@@ -456,23 +443,28 @@ def normalize_pub_date(date_str):
     day = match.group(5) or "01"
     return f"{year}-{month}-{day}"
 
-#I dati dal JSON vengono inseriti nel relational database
 class BibliographicEntityUploadHandler(UploadHandler):
+    """This class implements the method of the superclass to handle the
+    bibliographic metadata scenario, i.e., to handle JSON files in input
+    and store their data in a relational database"""
     def __init__(self):
        super().__init__()
 
-    # I dati dal JSON vengono inseriti nel database relazionale
+    # The function for reading the JSON file and populating the relational database
     def pushDataToDb(self, path):
-        try: # Logica try/except così che eventuali file danneggiati vengano segnalati
-            # Lettura del file JSON
+        try: # try/except block so that any corrupted or unreadable file gets reported instead of crashing the whole upload
+            # Opening the JSON file and closing it automatically at the end of the indented block
             with open(path, "r", encoding="utf-8") as f:
-                raw_data = json.load(f) # -> oggetto python: lista di dizionari
+                raw_data = json.load(f) # -> Python object: a list of dictionaries
                 
-            df = pd.json_normalize(raw_data) #dataframe creato con normalizzazione delle strutture nested
+            df = pd.json_normalize(raw_data) # Creating the DataFrame, flattening any nested structure
             
-            # come internal identifier è stato scelto omid in quanto presente in tutte le istanze del dataset di prova
-            # e per coerenza con quanto fatto nel graph database. Se presenti, le istanze senza omid vengono scartate e questo
-            # viene segnalato confrontando il numero di istanze prima e dopo e printando un messaggio nel terminale
+            
+            """ omid was chosen as the internal identifier because it is present
+            in every instance of the test dataset, and for consistency with what
+            is done in the graph database. If present, instances without an omid
+            are discarded; this is reported by comparing the number of instances
+            before and after the filtering, printing a message to the terminal """
 
             def extract_omid(id_list):
                 if not isinstance(id_list, list):
@@ -482,24 +474,26 @@ class BibliographicEntityUploadHandler(UploadHandler):
                         return identifier.replace(":", "-")
                 return None
 
-            before = len(df)
+            before = len(df) # Number of instances before discarding the ones without omid
             df["internal_id"] = df["id"].apply(extract_omid)
             df = df.dropna(subset=["internal_id"])
-            after = len(df)
+            after = len(df) # Number of instances after discarding the ones without omid
             if before != after:
                 print(f"Attenzione: {before - after} record scartati per omid mancante")
             
-            # Normalizzo tutti i valori vuoti convertendoli in stringhe vuote per i keys 
-            # che hanno una sola stringa (titolo, publication date, venue)
+            # Normalizing all the empty values into empty strings for the keys
+            # that hold a single string (title, publication date, venue)
             for col in ["title", "pub_date", "venue"]:
                 df[col] = df[col].fillna("").astype(str).str.strip()
 
             df["pub_date"] = df["pub_date"].apply(normalize_pub_date)
                 
-            # Li salvo in una tabella che contiene solo questi metadati
+            # Saving these columns into a dedicated table containing only the metadata
             bibliographic_entity = df[["internal_id", "title", "pub_date", "venue"]]
             
-            # Gestione delle keys che possono contenere più valori: creo tabelle apposite per Autori e ID
+            """ Handling the keys that can hold more than one value: creating
+            dedicated tables for Authors and ID, exploding the lists so that
+            every element gets its own row with the same internal_id """
             authors_table = df[["internal_id", "author"]].explode("author")
             authors_table["author"] = authors_table["author"].fillna("").astype(str).str.strip() # gestione delle keys vuote -> ""
             
@@ -507,7 +501,7 @@ class BibliographicEntityUploadHandler(UploadHandler):
             id_table["id"] = id_table["id"].fillna("").astype(str).str.strip()
             id_table = id_table[id_table["id"] != ""]
             
-            # Carico le tre tabelle (dataframe) su SQLite
+            # Loading the three tables (DataFrames) into SQLite
             db_path = self.getDbPathOrUrl()
             with sqlite3.connect(db_path) as conn:
                 bibliographic_entity.to_sql(
@@ -520,14 +514,17 @@ class BibliographicEntityUploadHandler(UploadHandler):
                     "BibliographicEntity_ID", conn, if_exists="replace", index=False
                 )
             return True
-            
+
+        # In case of fail    
         except Exception as e:
             print(f"Error during upload: {e}")
             return False
 
+# Silvia Baldassarri ––––––––––– BibliographicEntityUploadHandler –––––––––––
 
-# Qui il query handler, usando SQL
 class BibliographicEntityQueryHandler(QueryHandler):
+    """This class implements the method of the superclass to query the
+    bibliographic metadata stored in the relational database, using SQL"""
     def __init__(self):
         super().__init__()
     
@@ -582,6 +579,11 @@ class BibliographicEntityQueryHandler(QueryHandler):
             return pd.read_sql(query, con, params=(f"%{title}%",)) 
 
     def  getBibliographicEntitiesWithAuthor(self, author):
+        """Using a subquery on BibliographicEntity_Authors to first find the
+        internal_id(s) matching the given author, so that the outer query can
+        then aggregate all the co-authors for those entities: filtering
+        directly on the aggregated "authors" column would otherwise lose all
+        the co-authors of the matched entity"""
         with closing(sqlite3.connect(self.getDbPathOrUrl())) as con:
             query = """
             SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
@@ -599,31 +601,30 @@ class BibliographicEntityQueryHandler(QueryHandler):
             """   
             return pd.read_sql(query, con, params=(f"%{author}%",))
         
-        #qui ho fatto una "sottoquery" perché altrimenti si perdevano tutti i co-autori 
 
     def getBibliographicEntitiesWithinPublicationDate(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
     
         def pad_start(date_str):
-            """Completa una data parziale interpretandola come inizio periodo."""
+            """Completing a partial date, interpreting it as the start of the period"""
             if not date_str:
                 return None
             date_str = date_str.strip()
-            if len(date_str) == 4:       # solo anno: "2022"
+            if len(date_str) == 4:       # year only: "2022"
                 return date_str + "-01-01"
-            if len(date_str) == 7:       # anno-mese: "2022-10"
+            if len(date_str) == 7:       # year-month: "2022-10"
                 return date_str + "-01"
-            return date_str              # già completa: "2022-10-23"
+            return date_str              # already complete: "2022-10-23"
 
         def pad_end(date_str):
             """Completa una data parziale interpretandola come fine periodo."""
             if not date_str:
                 return None
             date_str = date_str.strip()
-            if len(date_str) == 4:       # solo anno: "2022"
+            if len(date_str) == 4:       # year only: "2022"
                 return date_str + "-12-31"
-            if len(date_str) == 7:       # anno-mese: "2022-10"
-            # Nota: usare sempre "-31" non è corretto per mesi più corti
-            # (es. novembre ha 30 giorni), ma per il confronto tra stringhe non crea problemi
+            if len(date_str) == 7:       # year-month: "2022-10"
+            # Note: always using "-31" isn't strictly correct for shorter months
+            # (e.g. November has 30 days), but it doesn't cause issues for string comparison
                 return date_str + "-31"
             return date_str
 
@@ -631,6 +632,7 @@ class BibliographicEntityQueryHandler(QueryHandler):
         end_date = pad_end(end_date)
 
         with closing(sqlite3.connect(self.getDbPathOrUrl())) as con:
+            # Building the WHERE clauses dynamically, only for the bounds provided
             where_clauses = ["1=1"]
             params = []
 
