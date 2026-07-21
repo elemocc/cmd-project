@@ -62,8 +62,8 @@ def iso_duration_to_days(duration):
     return years * 365 + months * 30 + days
 
 def normalize_creation_date(date_str):
-    """Porta le date parziali (YYYY o YYYY-MM) al formato completo YYYY-MM-DD
-    richiesto da xsd:date"""
+    """Modifying parital date (YYYY o YYYY-MM) to complete format YYYY-MM-DD
+    as requested by xsd:date"""
     if not date_str:
         return None
     date_str = date_str.strip()
@@ -71,7 +71,7 @@ def normalize_creation_date(date_str):
         return date_str + "-01-01"
     if len(date_str) == 7:        # "2010-03" -> "2010-03-01"
         return date_str + "-01"
-    return date_str               # già completa (YYYY-MM-DD)
+    return date_str               # already complete (YYYY-MM-DD)
 
 class CitationUploadHandler(UploadHandler): 
     """This class implements the method of the superclass to handle 
@@ -106,23 +106,23 @@ class CitationUploadHandler(UploadHandler):
             reader_csv = DictReader(f) # Reading the csv with the first row as the header
             for row in reader_csv: # A for loop through the csv in order to construct the nodes of the graph
                 subj = URIRef(self.base_url + "res/citation-" + row["oci"]) # The creation of the URI for citation 
-                """ The creation of the URI for citing entity and for the cited entity, also
-                replacing ":" with "-" for a matter of URI syntax
-                """
+
+                """The creation of the URI for citing entity and for the cited entity, also
+                replacing ":" with "-" for a matter of URI syntax"""
                 citing_entity = URIRef(self.base_url + "res/" + row["citing"].replace(":", "-")) 
                 cited_entity = URIRef(self.base_url + "res/" + row["cited"].replace(":", "-"))
 
-                """ Adding to the graph the triple (subject, predicate, object) 
+                """Adding to the graph the triple (subject, predicate, object) 
                 using the syntax for tuples, taking as subject the specific URI, 
                 the RDF.type as predicate to specify the data type, 
-                and the specific class Citation as the object """
+                and the specific class Citation as the object"""
                 my_graph.add((subj, RDF.type, Citation)) 
 
-                """ If a subject has more than one type: the subject remain the same
+                """If a subject has more than one type: the subject remain the same
                 but the object can be more than one. In these two following cases, the same
                 subject and the same precidate have three different objects, three different 
                 triples that can coexist within the same subject in RDF. 
-                This will be usefull managing the queries """
+                This will be usefull managing the queries"""
                 if row["author_sc"].strip().lower() == "yes":
                     my_graph.add((subj, RDF.type, Author_SC))
                 if row["journal_sc"].strip().lower() == "yes":
@@ -142,38 +142,38 @@ class CitationUploadHandler(UploadHandler):
                         except Exception as e:
                             print(f"Skipping invalid creation date '{row['creation']}' for {row['oci']}: {e}")
 
-                """ Adding the timespan: saving the original value as a string
+                """Adding the timespan: saving the original value as a string
                 then calling the function iso_duration_days for retrieving the
-                amount of days, then adding a second triple specified as XSD.integer """
+                amount of days, then adding a second triple specified as XSD.integer"""
                 if row["timespan"]:
                     my_graph.add((subj, duration_prop, Literal(row["timespan"])))
                     days = iso_duration_to_days(row["timespan"])
                     if days is not None:
                         my_graph.add((subj, duration_days_prop, Literal(days, datatype=XSD.integer)))
 
-        """ At the end of the for loop the file will be closed and the graph will 
-         contain all triples from all the citations """
+        """At the end of the for loop the file will be closed and the graph will 
+         contain all triples from all the citations"""
         return self._upload_graph(my_graph)
     
     # The function for pushing the graph to Blazegraph that takes as inputs: self, the graph and the batch size
     def _upload_graph(self, g, batch_size=200):
-        """ Uploading triples on Blazegraph by batches, to avoid query too big """
+        """Uploading triples on Blazegraph by batches, to avoid query too big"""
         try: 
             triples = list(g) # Transforming the graph into a list of tuples (subject, predicate, object)
             for i in range(0, len(triples), batch_size): # Number of iteration depends on the number of triples and the batch size
                 batch = triples[i:i + batch_size] # Slicing over the list of triples depending on the batch size
-                """ Setting the string for SPARQL query assigning for every triple the three variables 
-                # s (subject), p (predicate), o (object) to a string in SPARQL syntax using
-                # rdflib n.3() method to convert an URI or a Literal. Then joining all the strings together """
+                """Setting the string for SPARQL query assigning for every triple the three variables 
+                s (subject), p (predicate), o (object) to a string in SPARQL syntax using
+                rdflib n.3() method to convert an URI or a Literal. Then joining all the strings together"""
                 insert_data = " .\n".join(
                     f"{s.n3()} {p.n3()} {o.n3()}" for s, p, o in batch
                 ) 
-                """ To insert the value of the variable insert_data 
+                """To insert the value of the variable insert_data 
                 (the string with all the triple) into the query text
-                Also adding the last "." terminating the last triple for SPARQL syntax """
+                Also adding the last "." terminating the last triple for SPARQL syntax"""
                 query = f"INSERT DATA {{ {insert_data} . }}" 
 
-                """ This following block will be repeated for every batch """
+                """This following block will be repeated for every batch"""
                 sparql = SPARQLWrapper(self.dbPathOrUrl) # Creating an object to communicate with SPARQL endpoint
                 sparql.setMethod(POST) # The method POST is necessary with INSERT DATA
                 sparql.setQuery(query) # Setting the query text from the query above
@@ -199,24 +199,23 @@ class CitationQueryHandler(QueryHandler):
         sparql.setReturnFormat(JSON) # Asking Blazegraph endpoint to reply in JSON format
 
         #.query() will execute the query via Blazegraph, 
-        # then .convert() will transform it ina Python dictionary because we set JSON format above
+        # then .convert() will transform it in a Python dictionary because we set JSON format above
         results = sparql.query().convert()
         
 
         assert isinstance(results, dict) 
-        """ This line does two things at once:
+        """This line does two things at once:
         At RUNTIME: it actually checks that "results" really is a dict.
         If it's not, the program stops here with a clear AssertionError,
         instead of failing later with a more confusing error.
         For Pylance: "type narrowing", from this line onward, Pylance 
-        "trusts" that results is a dict.
-        """
+        "trusts" that results is a dict."""
 
         rows = []
         for binding in results["results"]["bindings"]: 
             # Iterating over the list of rows found by the query: 
             # "binding" is one single row of the SPARQL result
-            #e.g. {"citation": {"type": "uri", "value": "..."}, "citing": {...}}
+            # e.g. {"citation": {"type": "uri", "value": "..."}, "citing": {...}}
             rows.append({k: v["value"] for k, v in binding.items()}) 
             # we keep only the actual value of each variable, discarding "type"/"datatype"
         
@@ -226,13 +225,18 @@ class CitationQueryHandler(QueryHandler):
    
        # Implementing getById for the QueryHandler
     def getById(self, id: str) -> pd.DataFrame:
-        # Costruisco direttamente l'URI del soggetto, invece di usare
-        # FILTER(STRENDS(...)) su una stringa concatenata a mano: più
-        # sicuro (niente rischio di rompere la sintassi SPARQL con
-        # caratteri strani nell'id) e più efficiente per Blazegraph
+        """Fall back to the default base URL if this instance never had one set;
+        avoids an AttributeError since base_url is only assigned in the
+        upload handler, not here"""
         base_url = getattr(self, "base_url", "https://example.org/")
+
+        """Rebuild the exact subject URI used at upload time, instead of
+        matching it with FILTER(STRENDS(...)) on a hand-built string.
+        Wrapping it in <...> makes it a proper SPARQL URI literal"""
         citation_uri = f"<{base_url}res/citation-{id}>"
 
+        # BIND fixes ?citation to this single known URI, so the query does a
+        # direct lookup instead of scanning every citation and comparing strings
         query = f"""
         PREFIX vocab: <https://example.org/vocab/>
 
@@ -250,7 +254,10 @@ class CitationQueryHandler(QueryHandler):
         """
 
         df = self._run_query(query)
-
+        
+        """Convert the returned values from plain strings back into their
+        proper pandas types; invalid/missing values become NaN/NaT
+        instead of raising an error"""
         if not df.empty:
             if "creation" in df.columns:
                 df["creation"] = pd.to_datetime(df["creation"], errors="coerce")
@@ -284,7 +291,7 @@ class CitationQueryHandler(QueryHandler):
 
         return df
 
-    def getAllAuthorSelfCitations(self):    #modificato da elena il 20/07 per ovviare al problema della mancanza dei campi opzionali per ?creation e ?duration
+    def getAllAuthorSelfCitations(self):
         """Return only the citations flagged as author self-citations 
         (author_sc == "yes" in the original CSV)"""
         query = """
@@ -302,7 +309,7 @@ class CitationQueryHandler(QueryHandler):
             df["creation"] = pd.to_datetime(df["creation"], errors="coerce")
         return df
     
-    def getAllJournalSelfCitations(self): #modificato da elena il 20/07 per ovviare al problema della mancanza dei campi opzionali per ?creation e ?duration
+    def getAllJournalSelfCitations(self):
         """Return only the citations flagged as journal self-citations
         (journal_sc == "yes" in the original CSV)"""
         query = """
@@ -377,7 +384,7 @@ class CitationQueryHandler(QueryHandler):
         return df
     
     def getCitationsWithinTimespan(self, min_span=None, max_span=None):
-        """ Return citations whose duration (timespan) falls within
+        """Return citations whose duration (timespan) falls within
         [min_span, max_span] both given as ISO8601 duration strings. 
         The comparison happens on the precomputed "days" value not on
         the ISO string itself"""
