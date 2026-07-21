@@ -601,7 +601,6 @@ class BibliographicEntityQueryHandler(QueryHandler):
             """   
             return pd.read_sql(query, con, params=(f"%{author}%",))
         
-        #qui ho fatto una "sottoquery" perché altrimenti si perdevano tutti i co-autori 
 
     def getBibliographicEntitiesWithinPublicationDate(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
     
