@@ -23,18 +23,18 @@ class BasicQueryEngine:
         self.bibliographicEntityQuery.append(handler)
         return True
     
-    def getEntityById(self, id: str): #search for a specified ID among the citations and/or the bibliographic entities contained in the two databases
-        matchingIdEnt = pd.DataFrame() #create an empty dataframe which will contain the possible matching bibliogrphic entity/citation returned by the handlers
-        df_list = [] #create an empty list where to store the dataframes returne by the handlers
-        for handler in self.bibliographicEntityQuery: #for each handler, ask the
-            newDataFrame = handler.getById(id)
-            df_list.append(newDataFrame)
+    def getEntityById(self, id: str):   #search for a specified ID among the citations and/or the bibliographic entities contained in the two databases
+        matchingIdEnt = pd.DataFrame()  #create an empty dataframe which will contain the possible matching bibliogrphic entity/citation returned by the handlers
+        df_list = []    #create an empty list where to store the dataframes returne by the handlers
+        for handler in self.bibliographicEntityQuery:   #ask each bibliographic entity query handler to retrieve a bibliographic entity (if any) having a matching id, and add it to a dataframe
+            newDataFrame = handler.getById(id)  
+            df_list.append(newDataFrame)    #the dataframe returned by the bibliographic entities query handler is appended to the df_list
 
-        if  df_list: #controlla che la lista non sia vuota, nel caso per esempio in cui il method sia stato chiamato senza aver prima aggiunto gli handlers all'interno degli engines. se non è vuota concatena i dataframe        
+        if  df_list:    # if the list is not empty (that is, it contains at least one dataframe), all the dataframes will be concatenated in a single df
             matchingIdEnt = pd.concat(df_list, ignore_index=True)
 
-        if not matchingIdEnt.empty: #controlla che il dataframe non sia vuoto, solo se non è vuoto procede
-            row = matchingIdEnt.iloc[0] #iloc prende direttamente la prima row (indice 0), visto che dovrebbe essere solo una la riga nel df
+        if not matchingIdEnt.empty: #checks whether the dataframe is NOT empty, and only in that case it proceeds
+            row = matchingIdEnt.iloc[0] # considers only the first row in the dataframe (since only one row is expected), visto che dovrebbe essere solo una la riga nel df
             
             bibEntWithId = BibliographicEntity()
             bibEntWithId.title = row["title"]
@@ -56,7 +56,7 @@ class BasicQueryEngine:
             
             if not matchingIdCit.empty: #controlla che il dataframe non sia vuoto, solo se non è vuoto procede
                 row = matchingIdCit.iloc[0]
-                if row["journal_sc"] == "yes":   #VERIFICARE CHE ALICE ABBIA TRATTATO LA JOURNAL SC IN QUESTO MODO
+                if row["journal_sc"] == "yes":   
                     citWithId = JournalSelfCitation()
                 
                 elif row["author_sc"] == "yes":
