@@ -8,6 +8,7 @@ from csv import DictReader
 import json
 import sqlite3
 from contextlib import closing
+from typing import Optional
 import pandas as pd
 import re
 
@@ -518,16 +519,6 @@ class BibliographicEntityUploadHandler(UploadHandler):
             return False
 
 
-
-
-# Qui il query handler, usando SQL
-class QueryHandler(Handler):
-    def __init__(self):
-        super().__init__()
-
-    def getById(self, id: str) -> pd.DataFrame:
-        raise NotImplementedError
-
 # Qui il query handler, usando SQL
 class BibliographicEntityQueryHandler(QueryHandler):
     def __init__(self):
@@ -603,7 +594,7 @@ class BibliographicEntityQueryHandler(QueryHandler):
         
         #qui ho fatto una "sottoquery" perché altrimenti si perdevano tutti i co-autori 
 
-    def getBibliographicEntitiesWithinPublicationDate(self, start_date: str = None, end_date: str = None) -> pd.DataFrame:
+    def getBibliographicEntitiesWithinPublicationDate(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
     
         def pad_start(date_str):
             """Completa una data parziale interpretandola come inizio periodo."""
