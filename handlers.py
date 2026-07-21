@@ -356,11 +356,13 @@ class CitationQueryHandler(QueryHandler):
         query = f"""
         PREFIX vocab: <https://example.org/vocab/>
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-        SELECT ?citation ?citing ?cited ?creation WHERE {{
+        SELECT ?citation ?citing ?cited ?creation ?duration WHERE {{
             ?citation a vocab:Citation ;
                       vocab:hasCitingEntity ?citing ;
                       vocab:hasCitedEntity ?cited ;
                       vocab:hasCreationDate ?creation .
+
+            OPTIONAL {{ ?citation vocab:hasDuration ?duration }}
             {' '.join(filters)}
         }} 
         """
@@ -391,16 +393,21 @@ class CitationQueryHandler(QueryHandler):
 
         query = f"""
         PREFIX vocab: <https://example.org/vocab/>
-        SELECT ?citation ?citing ?cited ?duration ?days WHERE {{
+        SELECT ?citation ?citing ?cited ?creation ?duration ?days WHERE {{
             ?citation a vocab:Citation ;
                       vocab:hasCitingEntity ?citing ;
                       vocab:hasCitedEntity ?cited ;
                       vocab:hasDuration ?duration ;
                       vocab:hasDurationDays ?days .
+            OPTIONAL {{ ?citation vocab:hasCreationDate ?creation }}
             {' '.join(filters)}
         }}
         """
         df = self._run_query(query)
+
+        if not df.empty and "creation" in df.columns:
+            df["creation"] = pd.to_datetime(df["creation"], errors="coerce")
+        # if a value is not convertible, pandas will substitute it with NaT ("Not a Time")
 
         # "days" comes back as text so convert it to a number 
         if not df.empty and "days" in df.columns:
