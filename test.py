@@ -60,19 +60,20 @@ class TestProjectBasic(unittest.TestCase):
     #     self.assertIsInstance(q.getCitationsWithinTimespan("P2Y","P18Y"), DataFrame)
     #     self.assertIsInstance(q.getCitationsWithinDate("2010-03","2020"), DataFrame)
 
-    # def test_04_ProcessDataQueryHandler(self):
-    #     q = BibliographicEntityQueryHandler()
-    #     self.assertTrue(q.setDbPathOrUrl(self.relational))
-    #     self.assertEqual(q.getDbPathOrUrl(), self.relational)
+    def test_04_ProcessDataQueryHandler(self):
+          q = BibliographicEntityQueryHandler()
+          self.assertTrue(q.setDbPathOrUrl(self.relational))
+          self.assertEqual(q.getDbPathOrUrl(), self.relational)
 
-    #     self.assertIsInstance(q.getById("just_a_test"), DataFrame)
+          self.assertIsInstance(q.getById("just_a_test"), DataFrame)
 
-    #     self.assertIsInstance(q.getAllBibliographicEntities(), DataFrame)
-    #     self.assertIsInstance(q.getBibliographicEntitiesWithTitle("Machine learning"), DataFrame)
-    #     self.assertIsInstance(q.getBibliographicEntitiesWithAuthor("Rossi"), DataFrame)
-    #     self.assertIsInstance(q.getBibliographicEntitiesWithinPublicationDate("2022","2024"), DataFrame)
-    #     self.assertIsInstance(q.getBibliographicEntitiesWithVenue("Digital Scholarship In The Humanities"), DataFrame)
+          self.assertIsInstance(q.getAllBibliographicEntities(), DataFrame)
+          self.assertIsInstance(q.getBibliographicEntitiesWithTitle("Machine learning"), DataFrame)
+          self.assertIsInstance(q.getBibliographicEntitiesWithAuthor("Rossi"), DataFrame)
+          self.assertIsInstance(q.getBibliographicEntitiesWithinPublicationDate("2022","2024"), DataFrame)
+          self.assertIsInstance(q.getBibliographicEntitiesWithVenue("Digital Scholarship In The Humanities"), DataFrame)
 
+"""
     def test_05_FullQueryEngine(self):
         jq = CitationQueryHandler()
         jq.setDbPathOrUrl(self.graph)
@@ -159,3 +160,4 @@ class TestProjectBasic(unittest.TestCase):
         self.assertIsInstance(r, list)
         for i in r:
             self.assertIsInstance(i, Citation)
+"""

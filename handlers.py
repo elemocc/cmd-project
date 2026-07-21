@@ -7,6 +7,8 @@ import pandas as pd
 from csv import DictReader
 import json
 import sqlite3
+from contextlib import closing
+from typing import Optional
 import pandas as pd
 import re
 
@@ -517,23 +519,13 @@ class BibliographicEntityUploadHandler(UploadHandler):
             return False
 
 
-
-
-# Qui il query handler, usando SQL
-class QueryHandler(Handler):
-    def __init__(self):
-        super().__init__()
-
-    def getById(self, id: str) -> pd.DataFrame:
-        raise NotImplementedError
-
 # Qui il query handler, usando SQL
 class BibliographicEntityQueryHandler(QueryHandler):
     def __init__(self):
         super().__init__()
     
     def getById(self, id:str) -> pd.DataFrame:
-        with sqlite3.connect(self.getDbPathOrUrl()) as con:
+        with closing(sqlite3.connect(self.getDbPathOrUrl())) as con:
             query = """
                 SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
                        GROUP_CONCAT(BibliographicEntity_Authors.author, ';') as authors,
@@ -552,7 +544,7 @@ class BibliographicEntityQueryHandler(QueryHandler):
 
     
     def getAllBibliographicEntities(self):
-        with sqlite3.connect(self.getDbPathOrUrl()) as con:
+        with closing(sqlite3.connect(self.getDbPathOrUrl())) as con:
             query = """
                 SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
                        GROUP_CONCAT(BibliographicEntity_Authors.author, ';') as authors,
@@ -567,7 +559,7 @@ class BibliographicEntityQueryHandler(QueryHandler):
             return pd.read_sql(query, con)
 
     def  getBibliographicEntitiesWithTitle(self, title):
-        with sqlite3.connect(self.getDbPathOrUrl()) as con:
+        with closing(sqlite3.connect(self.getDbPathOrUrl())) as con:
             query = """
             SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
                        GROUP_CONCAT(BibliographicEntity_Authors.author, ';') as authors,
@@ -583,7 +575,7 @@ class BibliographicEntityQueryHandler(QueryHandler):
             return pd.read_sql(query, con, params=(f"%{title}%",)) 
 
     def  getBibliographicEntitiesWithAuthor(self, author):
-        with sqlite3.connect(self.getDbPathOrUrl()) as con:
+        with closing(sqlite3.connect(self.getDbPathOrUrl())) as con:
             query = """
             SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
                        GROUP_CONCAT(BibliographicEntity_Authors.author, ';') as authors,
@@ -602,7 +594,7 @@ class BibliographicEntityQueryHandler(QueryHandler):
         
         #qui ho fatto una "sottoquery" perché altrimenti si perdevano tutti i co-autori 
 
-    def getBibliographicEntitiesWithinPublicationDate(self, start_date: str = None, end_date: str = None) -> pd.DataFrame:
+    def getBibliographicEntitiesWithinPublicationDate(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
     
         def pad_start(date_str):
             """Completa una data parziale interpretandola come inizio periodo."""
@@ -631,7 +623,7 @@ class BibliographicEntityQueryHandler(QueryHandler):
         start_date = pad_start(start_date)
         end_date = pad_end(end_date)
 
-        with sqlite3.connect(self.getDbPathOrUrl()) as con:
+        with closing(sqlite3.connect(self.getDbPathOrUrl())) as con:
             where_clauses = ["1=1"]
             params = []
 
@@ -659,7 +651,7 @@ class BibliographicEntityQueryHandler(QueryHandler):
     
 
     def getBibliographicEntitiesWithVenue(self, venue):
-        with sqlite3.connect(self.getDbPathOrUrl()) as con:
+        with closing(sqlite3.connect(self.getDbPathOrUrl())) as con:
             query = """
             SELECT BibliographicEntity_Metadata.internal_id, title, pub_date, venue,
                        GROUP_CONCAT(BibliographicEntity_Authors.author, ';') as authors,
