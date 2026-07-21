@@ -1,1 +1,10 @@
 venv/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Cache dei test e ambienti
+.pytest_cache/
+.coverage
+*.db-journal
